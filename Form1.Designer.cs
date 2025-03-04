@@ -365,15 +365,16 @@ namespace Compiler
             // вызовСправкиToolStripMenuItem
             // 
             this.вызовСправкиToolStripMenuItem.Name = "вызовСправкиToolStripMenuItem";
-            this.вызовСправкиToolStripMenuItem.Size = new System.Drawing.Size(159, 22);
+            this.вызовСправкиToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.вызовСправкиToolStripMenuItem.Text = "Вызов справки ";
             this.вызовСправкиToolStripMenuItem.Click += new System.EventHandler(this.Help_button);
             // 
             // оПрограммеToolStripMenuItem
             // 
             this.оПрограммеToolStripMenuItem.Name = "оПрограммеToolStripMenuItem";
-            this.оПрограммеToolStripMenuItem.Size = new System.Drawing.Size(159, 22);
+            this.оПрограммеToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.оПрограммеToolStripMenuItem.Text = "О программе";
+            this.оПрограммеToolStripMenuItem.Click += new System.EventHandler(this.About_button);
             // 
             // Create
             // 
@@ -428,6 +429,7 @@ namespace Compiler
             this.About.Size = new System.Drawing.Size(32, 33);
             this.About.TabIndex = 16;
             this.About.UseVisualStyleBackColor = true;
+            this.About.Click += new System.EventHandler(this.About_button);
             // 
             // toolTip1
             // 
