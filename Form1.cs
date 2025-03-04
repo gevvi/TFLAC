@@ -33,18 +33,62 @@ namespace Compiler
             InitializeComponent();
             Tool_tips();
             UpdateTextBoxFont(); // Устанавливаем начальный шрифт
+            //AddNewTab(); // Добавляем начальную вкладкуAddNewTab(); // Добавляем начальную вкладку
             undoStack = new Stack<string>();//стек для отмены
             redoStack = new Stack<string>();//стек для повторения
             openFileDialog1.Filter = "Text files(*.txt)|*.txt|All files(*.*)|*.*";
             saveFileDialog1.Filter = "Text files(*.txt)|*.txt|All files(*.*)|*.*";
             // Разрешаем перетаскивание на форму
-            this.AllowDrop = true;
-
-            // Подписываемся на события перетаскивания
-            this.DragEnter += MainForm_DragEnter;
-            this.DragDrop += MainForm_DragDrop;
+            richTextBox1.AllowDrop = true;
+            richTextBox1.DragEnter += MainForm_DragEnter;
+            richTextBox1.DragDrop += MainForm_DragDrop;
         }
+        // Метод для добавления новой вкладки
+        //private void AddNewTab()
+        //{
+        //    // Создаем новую вкладку
+        //    TabPage newTabPage = new TabPage();
+        //    newTabPage.Text = "Новый текст"; // Название вкладки
 
+        //    // Добавляем TextBox на вкладку
+        //    RichTextBox textBox = new RichTextBox();
+        //    textBox.Multiline = true;
+        //    textBox.Dock = DockStyle.Fill;
+        //    textBox.ScrollBars = ScrollBars.Vertical;
+        //    newTabPage.Controls.Add(textBox);
+
+        //    // Добавляем вкладку в TabControl
+        //    tabControl.TabPages.Add(newTabPage);
+        //    tabControl.SelectedTab = newTabPage; // Переключаемся на новую вкладку
+        //}
+
+        // Метод для закрытия текущей вкладки
+        //private void CloseCurrentTab()
+        //{
+        //    if (tabControl.TabPages.Count > 0)
+        //    {
+        //        TabPage currentTab = tabControl.SelectedTab;
+
+        //        // Проверяем, есть ли несохраненные изменения
+        //        TextBox textBox = (TextBox)currentTab.Controls[0];
+        //        if (!string.IsNullOrEmpty(textBox.Text))
+        //        {
+        //            DialogResult result = MessageBox.Show("Сохранить изменения перед закрытием?", "Сохранение", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
+
+        //            if (result == DialogResult.Yes)
+        //            {
+        //                SaveTabContent(currentTab);
+        //            }
+        //            else if (result == DialogResult.Cancel)
+        //            {
+        //                return; // Отменяем закрытие вкладки
+        //            }
+        //        }
+
+        //        // Удаляем вкладку
+        //        tabControl.TabPages.Remove(currentTab);
+        //    }
+        //}
         private void Tool_tips()
         {
             toolTip1.SetToolTip(this.Create, "Создать");
@@ -57,6 +101,7 @@ namespace Compiler
             toolTip1.SetToolTip(this.Paste, "Вставить");
             toolTip1.SetToolTip(this.Start, "Пуск");
             toolTip1.SetToolTip(this.Help, "Справка");
+            toolTip1.SetToolTip(this.About, "О программе");
             toolTip1.SetToolTip(this.About, "О программе");
         }
 
@@ -422,14 +467,14 @@ namespace Compiler
             // Проверяем, что перетащен хотя бы один файл
             if (files != null && files.Length > 0)
             {
-                filePath = files[0]; // Берем первый файл
+                string filePath = files[0]; // Берем первый файл
 
                 // Проверяем, что файл имеет расширение .txt
                 if (Path.GetExtension(filePath).ToLower() == ".txt")
                 {
                     try
                     {
-                        // Читаем содержимое файла и отображаем его в TextBox
+                        // Читаем содержимое файла и отображаем его в RichTextBox
                         richTextBox1.Text = File.ReadAllText(filePath);
                     }
                     catch (Exception ex)
@@ -444,7 +489,7 @@ namespace Compiler
             }
         }
 
-        private void tabControl1_SelectedIndexChanged(object sender, EventArgs e)
+            private void tabControl1_SelectedIndexChanged(object sender, EventArgs e)
         {
 
         }
