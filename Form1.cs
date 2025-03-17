@@ -27,7 +27,22 @@ namespace Compiler
 
         // Начальный размер шрифта
         private float currentFontSize = 12;
-
+        private Dictionary<string, Color> keywords = new Dictionary<string, Color>
+        {
+            { "while", Color.Red },
+            { "for", Color.Red },
+            { "do", Color.Red },
+            { "select", Color.Red },
+            { "insert", Color.Red },
+            { "int", Color.Blue },
+            { "integer", Color.Blue },
+            { "float", Color.Blue },
+            { "char", Color.Blue },
+            { "numeric", Color.Blue },
+            { "const", Color.Blue },
+            { "constant", Color.Blue },
+            { "declare", Color.Blue },
+        };
         public Form1()
         {
             InitializeComponent();
@@ -42,6 +57,51 @@ namespace Compiler
             richTextBox1.AllowDrop = true;
             richTextBox1.DragEnter += MainForm_DragEnter;
             richTextBox1.DragDrop += MainForm_DragDrop;
+            richTextBox1.TextChanged += RichTextBox_TextChanged;
+        }
+        private void RichTextBox_TextChanged(object sender, EventArgs e)
+        {
+            // Сохраняем текущую позицию курсора и выделение
+            int originalPosition = richTextBox1.SelectionStart;
+            int originalLength = richTextBox1.SelectionLength;
+            Color originalColor = richTextBox1.SelectionColor;
+
+            // Отключаем обновление RichTextBox для предотвращения мерцания
+            richTextBox1.SuspendLayout();
+
+            // Сбрасываем цвет всего текста на стандартный
+            richTextBox1.SelectAll();
+            richTextBox1.SelectionColor = richTextBox1.ForeColor;
+
+            // Проходим по каждому ключевому слову
+            foreach (var keyword in keywords)
+            {
+                int startIndex = 0;
+                while (startIndex < richTextBox1.TextLength)
+                {
+                    // Ищем ключевое слово без учета регистра
+                    int wordStartIndex = richTextBox1.Find(keyword.Key, startIndex, RichTextBoxFinds.WholeWord | RichTextBoxFinds.None);
+                    if (wordStartIndex == -1) break;
+
+                    // Выделяем найденное слово
+                    richTextBox1.SelectionStart = wordStartIndex;
+                    richTextBox1.SelectionLength = keyword.Key.Length;
+
+                    // Меняем цвет выделенного текста на указанный в словаре
+                    richTextBox1.SelectionColor = keyword.Value;
+
+                    // Сдвигаем стартовый индекс для поиска следующего вхождения
+                    startIndex = wordStartIndex + keyword.Key.Length;
+                }
+            }
+
+            // Восстанавливаем позицию курсора и выделение
+            richTextBox1.SelectionStart = originalPosition;
+            richTextBox1.SelectionLength = originalLength;
+            richTextBox1.SelectionColor = originalColor;
+
+            // Возобновляем обновление RichTextBox
+            richTextBox1.ResumeLayout();
         }
         // Метод для добавления новой вкладки
         //private void AddNewTab()
