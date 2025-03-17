@@ -43,6 +43,9 @@ namespace Compiler
             { "constant", Color.Blue },
             { "declare", Color.Blue },
         };
+
+        private int lineNumberOffset = 1; // Отступ для номеров строк
+
         public Form1()
         {
             InitializeComponent();
@@ -58,9 +61,15 @@ namespace Compiler
             richTextBox1.DragEnter += MainForm_DragEnter;
             richTextBox1.DragDrop += MainForm_DragDrop;
             richTextBox1.TextChanged += RichTextBox_TextChanged;
+            richTextBox1.KeyDown += RichTextBox_KeyDown; // Подписываемся на событие нажатия клавиш
+            richTextBox1.VScroll += RichTextBox_VScroll;
+            //richTextBox1.Resize += RichTextBox_Resize;
         }
         private void RichTextBox_TextChanged(object sender, EventArgs e)
         {
+
+            // Обновляем панель с номерами строк при изменении текста
+            lineNumberPanel.Invalidate();
             // Сохраняем текущую позицию курсора и выделение
             int originalPosition = richTextBox1.SelectionStart;
             int originalLength = richTextBox1.SelectionLength;
@@ -103,6 +112,107 @@ namespace Compiler
             // Возобновляем обновление RichTextBox
             richTextBox1.ResumeLayout();
         }
+        private void RichTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            // Если нажата клавиша Enter
+            if (e.KeyCode == Keys.Enter)
+            {
+                // Принудительно обновляем панель с номерами строк
+                lineNumberPanel.Invalidate();
+            }
+            // Проверяем, нажата ли комбинация Ctrl + C (копирование)
+            if (e.Control && e.KeyCode == Keys.C)
+            {
+                CopyText();
+                e.SuppressKeyPress = true; // Предотвращаем стандартное поведение
+            }
+
+            // Проверяем, нажата ли комбинация Ctrl + V (вставка)
+            if (e.Control && e.KeyCode == Keys.V)
+            {
+                PasteText();
+                e.SuppressKeyPress = true; // Предотвращаем стандартное поведение
+            }
+
+            // Проверяем, нажата ли комбинация Ctrl + V (вставка)
+            if (e.Control && e.KeyCode == Keys.F)
+            {
+                SelectAll();
+                e.SuppressKeyPress = true; // Предотвращаем стандартное поведение
+            }
+        }
+        private void RichTextBox_VScroll(object sender, EventArgs e)
+        {
+            // Обновляем панель с номерами строк при прокрутке
+            lineNumberPanel.Invalidate();
+        }
+
+        private void RichTextBox_Resize(object sender, EventArgs e)
+        {
+            // Обновляем панель с номерами строк при изменении размера RichTextBox
+            lineNumberPanel.Invalidate();
+        }
+
+        private void LineNumberPanel_Paint(object sender, PaintEventArgs e)
+        {
+            // Получаем графический контекст для отрисовки
+            Graphics g = e.Graphics;
+            g.Clear(lineNumberPanel.BackColor);
+
+            // Получаем текущий шрифт и цвет для номеров строк
+            using (Font font = new Font(richTextBox1.Font.FontFamily, richTextBox1.Font.Size))
+            using (Brush brush = new SolidBrush(Color.Black))
+            {
+                // Получаем первую видимую строку
+                int firstVisibleLine = richTextBox1.GetCharIndexFromPosition(new Point(0, 0));
+                firstVisibleLine = richTextBox1.GetLineFromCharIndex(firstVisibleLine);
+
+                // Получаем общее количество строк в RichTextBox
+                int totalLines = richTextBox1.GetLineFromCharIndex(richTextBox1.TextLength) + 1;
+
+                // Получаем количество видимых строк
+                int visibleLineCount = (int)Math.Ceiling((double)richTextBox1.Height / richTextBox1.Font.Height);
+
+                // Ограничиваем количество отображаемых строк до общего количества строк
+                if (firstVisibleLine + visibleLineCount > totalLines)
+                {
+                    visibleLineCount = totalLines - firstVisibleLine;
+                }
+
+                // Отрисовываем номера строк только для задействованных строк
+                for (int i = 0; i < visibleLineCount; i++)
+                {
+                    int lineNumber = firstVisibleLine + i + 1; // Нумерация с 1
+                    string lineNumberText = lineNumber.ToString();
+                    float y = i * richTextBox1.Font.Height;
+                    g.DrawString(lineNumberText, font, brush, lineNumberOffset, y);
+                }
+            }
+        }
+
+        private void CopyText()
+        {
+            if (richTextBox1.SelectionLength > 0)
+            {
+                // Копируем выделенный текст в буфер обмена
+                Clipboard.SetText(richTextBox1.SelectedText);
+            }
+        }
+
+        private void PasteText()
+        {
+            if (Clipboard.ContainsText())
+            {
+                // Вставляем текст из буфера обмена
+                richTextBox1.Paste();
+            }
+        }
+
+        private void SelectAll()
+        {
+            richTextBox1.SelectAll();
+        }
+
         // Метод для добавления новой вкладки
         //private void AddNewTab()
         //{
@@ -149,6 +259,7 @@ namespace Compiler
         //        tabControl.TabPages.Remove(currentTab);
         //    }
         //}
+        
         private void Tool_tips()
         {
             toolTip1.SetToolTip(this.Create, "Создать");
@@ -224,7 +335,6 @@ namespace Compiler
 
             Application.Exit();
         }
-
 
         private void splitContainer1_Panel1_Paint(object sender, PaintEventArgs e)
         {
@@ -554,6 +664,16 @@ namespace Compiler
         {
             string helpText = "Выполнена 1 лабораторная работа";
             MessageBox.Show(helpText);
+        }
+
+        private void richTextBox2_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+
         }
     }
 }
