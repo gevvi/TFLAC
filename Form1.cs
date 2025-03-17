@@ -27,6 +27,7 @@ namespace Compiler
 
         // Начальный размер шрифта
         private float currentFontSize = 12;
+
         private Dictionary<string, Color> keywords = new Dictionary<string, Color>
         {
             { "while", Color.Red },
@@ -46,6 +47,8 @@ namespace Compiler
 
         private int lineNumberOffset = 1; // Отступ для номеров строк
 
+
+
         public Form1()
         {
             InitializeComponent();
@@ -64,6 +67,7 @@ namespace Compiler
             richTextBox1.KeyDown += RichTextBox_KeyDown; // Подписываемся на событие нажатия клавиш
             richTextBox1.VScroll += RichTextBox_VScroll;
             //richTextBox1.Resize += RichTextBox_Resize;
+
         }
         private void RichTextBox_TextChanged(object sender, EventArgs e)
         {
@@ -297,6 +301,7 @@ namespace Compiler
             string fileText = System.IO.File.ReadAllText(filename);
             richTextBox1.Text = fileText;
             MessageBox.Show("Файл открыт");
+            dataGridView1.Rows[0].Cells[0].Value = filename;
         }
 
         private void Save_as_button(object sender, EventArgs e)
@@ -308,6 +313,7 @@ namespace Compiler
             // сохраняем текст в файл
             System.IO.File.WriteAllText(filename, richTextBox1.Text);
             MessageBox.Show("Файл сохранен");
+            dataGridView1.Rows[0].Cells[0].Value = filePath;
         }
 
         // Метод для проверки необходимости сохранения изменений
@@ -458,6 +464,7 @@ namespace Compiler
                 // Обрабатываем ошибки
                 MessageBox.Show($"Ошибка при сохранении файла: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+            dataGridView1.Rows[0].Cells[0].Value = filePath;
         }
 
 
@@ -479,6 +486,7 @@ namespace Compiler
                 // Сообщаем пользователю об успешном создании файла
                 MessageBox.Show($"Файл успешно создан: {filePath}", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
+            dataGridView1.Rows[0].Cells[0].Value = filePath;
         }
 
         private void richTextBox1_TextChanged_1(object sender, EventArgs e)
@@ -674,6 +682,16 @@ namespace Compiler
         private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
 
+        }
+
+        private void toolStripStatusLabel1_Click(object sender, EventArgs e)
+        {
+
+            // Получаем текущую дату и время
+            string currentDateTime = DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss");
+
+            // Обновляем текст метки
+            toolStripStatusLabel1.Text = currentDateTime;
         }
     }
 }
