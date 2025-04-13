@@ -1,3 +1,4 @@
+using System.Text;
 using System.Windows.Forms;
 using static System.Windows.Forms.DataFormats;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
@@ -45,9 +46,14 @@ namespace Compiler
             { "declare", Color.Blue },
         };
 
+        private Dictionary<string, int> keyword = new Dictionary<string, int>
+        {
+            {"DECLARE", 1},
+            {"CONSTANT", 2},
+            {"NUMERIC", 3}
+        };
+
         private int lineNumberOffset = 1; // Отступ для номеров строк
-
-
 
         public Form1()
         {
@@ -67,7 +73,6 @@ namespace Compiler
             richTextBox1.KeyDown += RichTextBox_KeyDown; // Подписываемся на событие нажатия клавиш
             richTextBox1.VScroll += RichTextBox_VScroll;
             //richTextBox1.Resize += RichTextBox_Resize;
-
         }
         private void RichTextBox_TextChanged(object sender, EventArgs e)
         {
@@ -317,7 +322,7 @@ namespace Compiler
         }
 
         // Метод для проверки необходимости сохранения изменений
-        private DialogResult CheckSaveChanges()
+        private void CheckSaveChanges()
         {
             if (isTextChanged)
             {
@@ -328,11 +333,7 @@ namespace Compiler
                 {
                     Save_button(null, null); // Сохраняем файл
                 }
-
-                return result;
             }
-
-            return DialogResult.No; // Если изменений нет, возвращаем "Нет"
         }
 
         private void Exit_button(object sender, EventArgs e)
@@ -683,15 +684,212 @@ namespace Compiler
         {
 
         }
+        #region Парсер
+        //Парсер
+        //private void Start_Click(object sender, EventArgs e)
+        //{
+        //    dataGridView1.Rows.Clear();
 
-        private void toolStripStatusLabel1_Click(object sender, EventArgs e)
-        {
+        //    try
+        //    {
+        //        string code = RemoveInsignificantSpaces(richTextBox1.Text);
+        //        List<Token> tokens = Scan(code);
 
-            // Получаем текущую дату и время
-            string currentDateTime = DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss");
+        //        foreach (Token token in tokens)
+        //        {
+        //            dataGridView1.Rows.Add(
+        //                token.Code,
+        //                token.Type,
+        //                token.Value,
+        //                $"с {token.StartPosition} по {token.EndPosition}"
+        //            );
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        MessageBox.Show($"Ошибка: {ex.Message}");
+        //    }
+        //}
 
-            // Обновляем текст метки
-            toolStripStatusLabel1.Text = currentDateTime;
-        }
+        //private string RemoveInsignificantSpaces(string input)
+        //{
+        //    StringBuilder result = new StringBuilder();
+        //    bool inStringLiteral = false;
+        //    bool spaceAdded = true; // Начинаем с true, чтобы не добавлять пробелы в начале
+
+        //    for (int i = 0; i < input.Length; i++)
+        //    {
+        //        char c = input[i];
+
+        //        if (c == '\'')
+        //        {
+        //            inStringLiteral = !inStringLiteral;
+        //            result.Append(c);
+        //            spaceAdded = false;
+        //        }
+        //        else if (inStringLiteral)
+        //        {
+        //            result.Append(c);
+        //            spaceAdded = false;
+        //        }
+        //        else if (char.IsWhiteSpace(c))
+        //        {
+        //            if (!spaceAdded && (i + 1 < input.Length) && !IsOperatorChar(input[i + 1]))
+        //            {
+        //                result.Append(' ');
+        //                spaceAdded = true;
+        //            }
+        //        }
+        //        else
+        //        {
+        //            result.Append(c);
+        //            spaceAdded = false;
+        //        }
+        //    }
+
+        //    return result.ToString().Trim();
+        //}
+
+        //private bool IsOperatorChar(char c)
+        //{
+        //    return c == ':' || c == '=' || c == '+' || c == '-' || c == '*' || c == '/' || c == ';';
+        //}
+        //private List<Token> Scan(string code)
+        //{
+        //    List<Token> tokens = new List<Token>();
+        //    int position = 0;
+        //    int line = 1;
+        //    int lineStartPosition = 0;
+
+        //    while (position < code.Length)
+        //    {
+        //        char current = code[position];
+        //        int charPositionInLine = position - lineStartPosition + 1;
+
+        //        // Пропускаем пробелы
+        //        if (char.IsWhiteSpace(current))
+        //        {
+
+        //            tokens.Add(new Token(
+        //                5, "Пробел", " ",
+        //                line, charPositionInLine, charPositionInLine
+        //            ));
+
+        //            position++;
+        //            continue;
+        //        }
+
+        //        // Обработка букв (идентификаторы и ключевые слова)
+        //        if (char.IsLetter(current))
+        //        {
+        //            int start = position;
+        //            int startCharPos = charPositionInLine;
+
+        //            while (position < code.Length && (char.IsLetterOrDigit(code[position]) || code[position] == '_'))
+        //            {
+        //                position++;
+        //            }
+
+        //            string value = code.Substring(start, position - start);
+        //            int endCharPos = startCharPos + (position - start) - 1;
+
+        //            if (keyword.ContainsKey(value))
+        //            {
+        //                tokens.Add(new Token(
+        //                    keyword[value], "Ключевое слово", value,
+        //                    line, startCharPos, endCharPos
+        //                ));
+        //            }
+        //            else
+        //            {
+        //                tokens.Add(new Token(
+        //                    4, "Идентификатор", value,
+        //                    line, startCharPos, endCharPos
+        //                ));
+        //            }
+        //            continue;
+        //        }
+
+        //        // Обработка чисел (целые и дробные)
+        //        if (char.IsDigit(current))
+        //        {
+        //            int start = position;
+        //            int startCharPos = charPositionInLine;
+        //            bool hasDecimalPoint = false;
+
+        //            while (position < code.Length && (char.IsDigit(code[position]) || (code[position] == '.' && !hasDecimalPoint)))
+        //            {
+        //                if (code[position] == '.') hasDecimalPoint = true;
+        //                position++;
+        //            }
+
+        //            string value = code.Substring(start, position - start);
+        //            int endCharPos = startCharPos + (position - start) - 1;
+
+        //            tokens.Add(new Token(
+        //                hasDecimalPoint ? 9 : 8,
+        //                hasDecimalPoint ? "Дробное число" : "Целое число без знака",
+        //                value,
+        //                line, startCharPos, endCharPos
+        //            ));
+        //            continue;
+        //        }
+
+        //        // Обработка операторов
+        //        if (current == ':' && position + 1 < code.Length && code[position + 1] == '=')
+        //        {
+        //            tokens.Add(new Token(
+        //                7, "Оператор присваивания", ":=",
+        //                line, charPositionInLine, charPositionInLine + 1
+        //            ));
+        //            position += 2;
+        //            continue;
+        //        }
+
+        //        // Обработка точки с запятой
+        //        if (current == ';')
+        //        {
+        //            tokens.Add(new Token(
+        //                10, "Конец оператора", ";",
+        //                line, charPositionInLine, charPositionInLine
+        //            ));
+        //            position++;
+        //            continue;
+        //        }
+
+        //        // Обработка недопустимых символов
+        //        tokens.Add(new Token(
+        //            11, "Недопустимый символ", current.ToString(),
+        //            line, charPositionInLine, charPositionInLine
+        //        ));
+        //        position++;
+        //    }
+
+        //    return tokens;
+        //}
+
+        //private class Token
+        //{
+        //    public int Code { get; }
+        //    public string Type { get; }
+        //    public string Value { get; }
+        //    public int Line { get; }
+        //    public int StartPosition { get; }
+        //    public int EndPosition { get; }
+
+        //    public Token(int code, string type, string value, int line, int startPos, int endPos)
+        //    {
+        //        Code = code;
+        //        Type = type;
+        //        Value = value;
+        //        Line = line;
+        //        StartPosition = startPos;
+        //        EndPosition = endPos;
+        //    }
+        //}
+        #endregion
+        #region Сканер
+
+        #endregion
     }
 }
