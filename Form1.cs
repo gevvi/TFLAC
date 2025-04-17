@@ -1,32 +1,29 @@
-using System.Text;
-using System.Windows.Forms;
-using static System.Windows.Forms.DataFormats;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.ToolBar;
+п»їusing System.Text;
+using Application = System.Windows.Forms.Application;
 
 namespace Compiler
 {
     public partial class Form1 : Form
     {
-        //Переменная для сохранения пути файла
+        //РџРµСЂРµРјРµРЅРЅР°СЏ РґР»СЏ СЃРѕС…СЂР°РЅРµРЅРёСЏ РїСѓС‚Рё С„Р°Р№Р»Р°
         private string filePath = null;
 
-        //переменная для смены языка
+        //РїРµСЂРµРјРµРЅРЅР°СЏ РґР»СЏ СЃРјРµРЅС‹ СЏР·С‹РєР°
         int i = 1;
 
-        //Ограничение стека textbox
+        //РћРіСЂР°РЅРёС‡РµРЅРёРµ СЃС‚РµРєР° textbox
         private const int MaxStackSize = 100;
 
-        // Стек для хранения истории изменений
+        // РЎС‚РµРє РґР»СЏ С…СЂР°РЅРµРЅРёСЏ РёСЃС‚РѕСЂРёРё РёР·РјРµРЅРµРЅРёР№
         private Stack<string> undoStack;
 
-        // Стек для хранения отмененных действий (повторение)
+        // РЎС‚РµРє РґР»СЏ С…СЂР°РЅРµРЅРёСЏ РѕС‚РјРµРЅРµРЅРЅС‹С… РґРµР№СЃС‚РІРёР№ (РїРѕРІС‚РѕСЂРµРЅРёРµ)
         private Stack<string> redoStack;
 
-        // Флаг для отслеживания изменений
+        // Р¤Р»Р°Рі РґР»СЏ РѕС‚СЃР»РµР¶РёРІР°РЅРёСЏ РёР·РјРµРЅРµРЅРёР№
         private bool isTextChanged = false;
 
-        // Начальный размер шрифта
+        // РќР°С‡Р°Р»СЊРЅС‹Р№ СЂР°Р·РјРµСЂ С€СЂРёС„С‚Р°
         private float currentFontSize = 12;
 
         private Dictionary<string, Color> keywords = new Dictionary<string, Color>
@@ -53,145 +50,158 @@ namespace Compiler
             {"NUMERIC", 3}
         };
 
-        private int lineNumberOffset = 1; // Отступ для номеров строк
+        // РЎРѕСЃС‚РѕСЏРЅРёСЏ РєРѕРЅРµС‡РЅРѕРіРѕ Р°РІС‚РѕРјР°С‚Р°
+        private enum ParserState
+        {
+            Start,
+            AfterDeclare,
+            AfterIdentifier,
+            AfterConstant,
+            AfterType,
+            AfterAssign,
+            AfterValue,
+            Error
+        }
+
+        private int lineNumberOffset = 1; // РћС‚СЃС‚СѓРї РґР»СЏ РЅРѕРјРµСЂРѕРІ СЃС‚СЂРѕРє
 
         public Form1()
         {
             InitializeComponent();
             Tool_tips();
-            UpdateTextBoxFont(); // Устанавливаем начальный шрифт
-            //AddNewTab(); // Добавляем начальную вкладкуAddNewTab(); // Добавляем начальную вкладку
-            undoStack = new Stack<string>();//стек для отмены
-            redoStack = new Stack<string>();//стек для повторения
+            UpdateTextBoxFont(); // РЈСЃС‚Р°РЅР°РІР»РёРІР°РµРј РЅР°С‡Р°Р»СЊРЅС‹Р№ С€СЂРёС„С‚
+            //AddNewTab(); // Р”РѕР±Р°РІР»СЏРµРј РЅР°С‡Р°Р»СЊРЅСѓСЋ РІРєР»Р°РґРєСѓAddNewTab(); // Р”РѕР±Р°РІР»СЏРµРј РЅР°С‡Р°Р»СЊРЅСѓСЋ РІРєР»Р°РґРєСѓ
+            undoStack = new Stack<string>();//СЃС‚РµРє РґР»СЏ РѕС‚РјРµРЅС‹
+            redoStack = new Stack<string>();//СЃС‚РµРє РґР»СЏ РїРѕРІС‚РѕСЂРµРЅРёСЏ
             openFileDialog1.Filter = "Text files(*.txt)|*.txt|All files(*.*)|*.*";
             saveFileDialog1.Filter = "Text files(*.txt)|*.txt|All files(*.*)|*.*";
-            // Разрешаем перетаскивание на форму
+            // Р Р°Р·СЂРµС€Р°РµРј РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРµ РЅР° С„РѕСЂРјСѓ
             richTextBox1.AllowDrop = true;
             richTextBox1.DragEnter += MainForm_DragEnter;
             richTextBox1.DragDrop += MainForm_DragDrop;
             richTextBox1.TextChanged += RichTextBox_TextChanged;
-            richTextBox1.KeyDown += RichTextBox_KeyDown; // Подписываемся на событие нажатия клавиш
+            richTextBox1.KeyDown += RichTextBox_KeyDown; // РџРѕРґРїРёСЃС‹РІР°РµРјСЃСЏ РЅР° СЃРѕР±С‹С‚РёРµ РЅР°Р¶Р°С‚РёСЏ РєР»Р°РІРёС€
             richTextBox1.VScroll += RichTextBox_VScroll;
             //richTextBox1.Resize += RichTextBox_Resize;
         }
         private void RichTextBox_TextChanged(object sender, EventArgs e)
         {
 
-            // Обновляем панель с номерами строк при изменении текста
+            // РћР±РЅРѕРІР»СЏРµРј РїР°РЅРµР»СЊ СЃ РЅРѕРјРµСЂР°РјРё СЃС‚СЂРѕРє РїСЂРё РёР·РјРµРЅРµРЅРёРё С‚РµРєСЃС‚Р°
             lineNumberPanel.Invalidate();
-            // Сохраняем текущую позицию курсора и выделение
+            // РЎРѕС…СЂР°РЅСЏРµРј С‚РµРєСѓС‰СѓСЋ РїРѕР·РёС†РёСЋ РєСѓСЂСЃРѕСЂР° Рё РІС‹РґРµР»РµРЅРёРµ
             int originalPosition = richTextBox1.SelectionStart;
             int originalLength = richTextBox1.SelectionLength;
             Color originalColor = richTextBox1.SelectionColor;
 
-            // Отключаем обновление RichTextBox для предотвращения мерцания
+            // РћС‚РєР»СЋС‡Р°РµРј РѕР±РЅРѕРІР»РµРЅРёРµ RichTextBox РґР»СЏ РїСЂРµРґРѕС‚РІСЂР°С‰РµРЅРёСЏ РјРµСЂС†Р°РЅРёСЏ
             richTextBox1.SuspendLayout();
 
-            // Сбрасываем цвет всего текста на стандартный
+            // РЎР±СЂР°СЃС‹РІР°РµРј С†РІРµС‚ РІСЃРµРіРѕ С‚РµРєСЃС‚Р° РЅР° СЃС‚Р°РЅРґР°СЂС‚РЅС‹Р№
             richTextBox1.SelectAll();
             richTextBox1.SelectionColor = richTextBox1.ForeColor;
 
-            // Проходим по каждому ключевому слову
+            // РџСЂРѕС…РѕРґРёРј РїРѕ РєР°Р¶РґРѕРјСѓ РєР»СЋС‡РµРІРѕРјСѓ СЃР»РѕРІСѓ
             foreach (var keyword in keywords)
             {
                 int startIndex = 0;
                 while (startIndex < richTextBox1.TextLength)
                 {
-                    // Ищем ключевое слово без учета регистра
+                    // РС‰РµРј РєР»СЋС‡РµРІРѕРµ СЃР»РѕРІРѕ Р±РµР· СѓС‡РµС‚Р° СЂРµРіРёСЃС‚СЂР°
                     int wordStartIndex = richTextBox1.Find(keyword.Key, startIndex, RichTextBoxFinds.WholeWord | RichTextBoxFinds.None);
                     if (wordStartIndex == -1) break;
 
-                    // Выделяем найденное слово
+                    // Р’С‹РґРµР»СЏРµРј РЅР°Р№РґРµРЅРЅРѕРµ СЃР»РѕРІРѕ
                     richTextBox1.SelectionStart = wordStartIndex;
                     richTextBox1.SelectionLength = keyword.Key.Length;
 
-                    // Меняем цвет выделенного текста на указанный в словаре
+                    // РњРµРЅСЏРµРј С†РІРµС‚ РІС‹РґРµР»РµРЅРЅРѕРіРѕ С‚РµРєСЃС‚Р° РЅР° СѓРєР°Р·Р°РЅРЅС‹Р№ РІ СЃР»РѕРІР°СЂРµ
                     richTextBox1.SelectionColor = keyword.Value;
 
-                    // Сдвигаем стартовый индекс для поиска следующего вхождения
+                    // РЎРґРІРёРіР°РµРј СЃС‚Р°СЂС‚РѕРІС‹Р№ РёРЅРґРµРєСЃ РґР»СЏ РїРѕРёСЃРєР° СЃР»РµРґСѓСЋС‰РµРіРѕ РІС…РѕР¶РґРµРЅРёСЏ
                     startIndex = wordStartIndex + keyword.Key.Length;
                 }
             }
 
-            // Восстанавливаем позицию курсора и выделение
+            // Р’РѕСЃСЃС‚Р°РЅР°РІР»РёРІР°РµРј РїРѕР·РёС†РёСЋ РєСѓСЂСЃРѕСЂР° Рё РІС‹РґРµР»РµРЅРёРµ
             richTextBox1.SelectionStart = originalPosition;
             richTextBox1.SelectionLength = originalLength;
             richTextBox1.SelectionColor = originalColor;
 
-            // Возобновляем обновление RichTextBox
+            // Р’РѕР·РѕР±РЅРѕРІР»СЏРµРј РѕР±РЅРѕРІР»РµРЅРёРµ RichTextBox
             richTextBox1.ResumeLayout();
         }
         private void RichTextBox_KeyDown(object sender, KeyEventArgs e)
         {
-            // Если нажата клавиша Enter
+            // Р•СЃР»Рё РЅР°Р¶Р°С‚Р° РєР»Р°РІРёС€Р° Enter
             if (e.KeyCode == Keys.Enter)
             {
-                // Принудительно обновляем панель с номерами строк
+                // РџСЂРёРЅСѓРґРёС‚РµР»СЊРЅРѕ РѕР±РЅРѕРІР»СЏРµРј РїР°РЅРµР»СЊ СЃ РЅРѕРјРµСЂР°РјРё СЃС‚СЂРѕРє
                 lineNumberPanel.Invalidate();
             }
-            // Проверяем, нажата ли комбинация Ctrl + C (копирование)
+            // РџСЂРѕРІРµСЂСЏРµРј, РЅР°Р¶Р°С‚Р° Р»Рё РєРѕРјР±РёРЅР°С†РёСЏ Ctrl + C (РєРѕРїРёСЂРѕРІР°РЅРёРµ)
             if (e.Control && e.KeyCode == Keys.C)
             {
                 CopyText();
-                e.SuppressKeyPress = true; // Предотвращаем стандартное поведение
+                e.SuppressKeyPress = true; // РџСЂРµРґРѕС‚РІСЂР°С‰Р°РµРј СЃС‚Р°РЅРґР°СЂС‚РЅРѕРµ РїРѕРІРµРґРµРЅРёРµ
             }
 
-            // Проверяем, нажата ли комбинация Ctrl + V (вставка)
+            // РџСЂРѕРІРµСЂСЏРµРј, РЅР°Р¶Р°С‚Р° Р»Рё РєРѕРјР±РёРЅР°С†РёСЏ Ctrl + V (РІСЃС‚Р°РІРєР°)
             if (e.Control && e.KeyCode == Keys.V)
             {
                 PasteText();
-                e.SuppressKeyPress = true; // Предотвращаем стандартное поведение
+                e.SuppressKeyPress = true; // РџСЂРµРґРѕС‚РІСЂР°С‰Р°РµРј СЃС‚Р°РЅРґР°СЂС‚РЅРѕРµ РїРѕРІРµРґРµРЅРёРµ
             }
 
-            // Проверяем, нажата ли комбинация Ctrl + V (вставка)
+            // РџСЂРѕРІРµСЂСЏРµРј, РЅР°Р¶Р°С‚Р° Р»Рё РєРѕРјР±РёРЅР°С†РёСЏ Ctrl + V (РІСЃС‚Р°РІРєР°)
             if (e.Control && e.KeyCode == Keys.F)
             {
                 SelectAll();
-                e.SuppressKeyPress = true; // Предотвращаем стандартное поведение
+                e.SuppressKeyPress = true; // РџСЂРµРґРѕС‚РІСЂР°С‰Р°РµРј СЃС‚Р°РЅРґР°СЂС‚РЅРѕРµ РїРѕРІРµРґРµРЅРёРµ
             }
         }
         private void RichTextBox_VScroll(object sender, EventArgs e)
         {
-            // Обновляем панель с номерами строк при прокрутке
+            // РћР±РЅРѕРІР»СЏРµРј РїР°РЅРµР»СЊ СЃ РЅРѕРјРµСЂР°РјРё СЃС‚СЂРѕРє РїСЂРё РїСЂРѕРєСЂСѓС‚РєРµ
             lineNumberPanel.Invalidate();
         }
 
         private void RichTextBox_Resize(object sender, EventArgs e)
         {
-            // Обновляем панель с номерами строк при изменении размера RichTextBox
+            // РћР±РЅРѕРІР»СЏРµРј РїР°РЅРµР»СЊ СЃ РЅРѕРјРµСЂР°РјРё СЃС‚СЂРѕРє РїСЂРё РёР·РјРµРЅРµРЅРёРё СЂР°Р·РјРµСЂР° RichTextBox
             lineNumberPanel.Invalidate();
         }
 
         private void LineNumberPanel_Paint(object sender, PaintEventArgs e)
         {
-            // Получаем графический контекст для отрисовки
+            // РџРѕР»СѓС‡Р°РµРј РіСЂР°С„РёС‡РµСЃРєРёР№ РєРѕРЅС‚РµРєСЃС‚ РґР»СЏ РѕС‚СЂРёСЃРѕРІРєРё
             Graphics g = e.Graphics;
             g.Clear(lineNumberPanel.BackColor);
 
-            // Получаем текущий шрифт и цвет для номеров строк
+            // РџРѕР»СѓС‡Р°РµРј С‚РµРєСѓС‰РёР№ С€СЂРёС„С‚ Рё С†РІРµС‚ РґР»СЏ РЅРѕРјРµСЂРѕРІ СЃС‚СЂРѕРє
             using (Font font = new Font(richTextBox1.Font.FontFamily, richTextBox1.Font.Size))
             using (Brush brush = new SolidBrush(Color.Black))
             {
-                // Получаем первую видимую строку
+                // РџРѕР»СѓС‡Р°РµРј РїРµСЂРІСѓСЋ РІРёРґРёРјСѓСЋ СЃС‚СЂРѕРєСѓ
                 int firstVisibleLine = richTextBox1.GetCharIndexFromPosition(new Point(0, 0));
                 firstVisibleLine = richTextBox1.GetLineFromCharIndex(firstVisibleLine);
 
-                // Получаем общее количество строк в RichTextBox
+                // РџРѕР»СѓС‡Р°РµРј РѕР±С‰РµРµ РєРѕР»РёС‡РµСЃС‚РІРѕ СЃС‚СЂРѕРє РІ RichTextBox
                 int totalLines = richTextBox1.GetLineFromCharIndex(richTextBox1.TextLength) + 1;
 
-                // Получаем количество видимых строк
+                // РџРѕР»СѓС‡Р°РµРј РєРѕР»РёС‡РµСЃС‚РІРѕ РІРёРґРёРјС‹С… СЃС‚СЂРѕРє
                 int visibleLineCount = (int)Math.Ceiling((double)richTextBox1.Height / richTextBox1.Font.Height);
 
-                // Ограничиваем количество отображаемых строк до общего количества строк
+                // РћРіСЂР°РЅРёС‡РёРІР°РµРј РєРѕР»РёС‡РµСЃС‚РІРѕ РѕС‚РѕР±СЂР°Р¶Р°РµРјС‹С… СЃС‚СЂРѕРє РґРѕ РѕР±С‰РµРіРѕ РєРѕР»РёС‡РµСЃС‚РІР° СЃС‚СЂРѕРє
                 if (firstVisibleLine + visibleLineCount > totalLines)
                 {
                     visibleLineCount = totalLines - firstVisibleLine;
                 }
 
-                // Отрисовываем номера строк только для задействованных строк
+                // РћС‚СЂРёСЃРѕРІС‹РІР°РµРј РЅРѕРјРµСЂР° СЃС‚СЂРѕРє С‚РѕР»СЊРєРѕ РґР»СЏ Р·Р°РґРµР№СЃС‚РІРѕРІР°РЅРЅС‹С… СЃС‚СЂРѕРє
                 for (int i = 0; i < visibleLineCount; i++)
                 {
-                    int lineNumber = firstVisibleLine + i + 1; // Нумерация с 1
+                    int lineNumber = firstVisibleLine + i + 1; // РќСѓРјРµСЂР°С†РёСЏ СЃ 1
                     string lineNumberText = lineNumber.ToString();
                     float y = i * richTextBox1.Font.Height;
                     g.DrawString(lineNumberText, font, brush, lineNumberOffset, y);
@@ -203,7 +213,7 @@ namespace Compiler
         {
             if (richTextBox1.SelectionLength > 0)
             {
-                // Копируем выделенный текст в буфер обмена
+                // РљРѕРїРёСЂСѓРµРј РІС‹РґРµР»РµРЅРЅС‹Р№ С‚РµРєСЃС‚ РІ Р±СѓС„РµСЂ РѕР±РјРµРЅР°
                 Clipboard.SetText(richTextBox1.SelectedText);
             }
         }
@@ -212,7 +222,7 @@ namespace Compiler
         {
             if (Clipboard.ContainsText())
             {
-                // Вставляем текст из буфера обмена
+                // Р’СЃС‚Р°РІР»СЏРµРј С‚РµРєСЃС‚ РёР· Р±СѓС„РµСЂР° РѕР±РјРµРЅР°
                 richTextBox1.Paste();
             }
         }
@@ -222,37 +232,37 @@ namespace Compiler
             richTextBox1.SelectAll();
         }
 
-        // Метод для добавления новой вкладки
+        // РњРµС‚РѕРґ РґР»СЏ РґРѕР±Р°РІР»РµРЅРёСЏ РЅРѕРІРѕР№ РІРєР»Р°РґРєРё
         //private void AddNewTab()
         //{
-        //    // Создаем новую вкладку
+        //    // РЎРѕР·РґР°РµРј РЅРѕРІСѓСЋ РІРєР»Р°РґРєСѓ
         //    TabPage newTabPage = new TabPage();
-        //    newTabPage.Text = "Новый текст"; // Название вкладки
+        //    newTabPage.Text = "РќРѕРІС‹Р№ С‚РµРєСЃС‚"; // РќР°Р·РІР°РЅРёРµ РІРєР»Р°РґРєРё
 
-        //    // Добавляем TextBox на вкладку
+        //    // Р”РѕР±Р°РІР»СЏРµРј TextBox РЅР° РІРєР»Р°РґРєСѓ
         //    RichTextBox textBox = new RichTextBox();
         //    textBox.Multiline = true;
         //    textBox.Dock = DockStyle.Fill;
         //    textBox.ScrollBars = ScrollBars.Vertical;
         //    newTabPage.Controls.Add(textBox);
 
-        //    // Добавляем вкладку в TabControl
+        //    // Р”РѕР±Р°РІР»СЏРµРј РІРєР»Р°РґРєСѓ РІ TabControl
         //    tabControl.TabPages.Add(newTabPage);
-        //    tabControl.SelectedTab = newTabPage; // Переключаемся на новую вкладку
+        //    tabControl.SelectedTab = newTabPage; // РџРµСЂРµРєР»СЋС‡Р°РµРјСЃСЏ РЅР° РЅРѕРІСѓСЋ РІРєР»Р°РґРєСѓ
         //}
 
-        // Метод для закрытия текущей вкладки
+        // РњРµС‚РѕРґ РґР»СЏ Р·Р°РєСЂС‹С‚РёСЏ С‚РµРєСѓС‰РµР№ РІРєР»Р°РґРєРё
         //private void CloseCurrentTab()
         //{
         //    if (tabControl.TabPages.Count > 0)
         //    {
         //        TabPage currentTab = tabControl.SelectedTab;
 
-        //        // Проверяем, есть ли несохраненные изменения
+        //        // РџСЂРѕРІРµСЂСЏРµРј, РµСЃС‚СЊ Р»Рё РЅРµСЃРѕС…СЂР°РЅРµРЅРЅС‹Рµ РёР·РјРµРЅРµРЅРёСЏ
         //        TextBox textBox = (TextBox)currentTab.Controls[0];
         //        if (!string.IsNullOrEmpty(textBox.Text))
         //        {
-        //            DialogResult result = MessageBox.Show("Сохранить изменения перед закрытием?", "Сохранение", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
+        //            DialogResult result = MessageBox.Show("РЎРѕС…СЂР°РЅРёС‚СЊ РёР·РјРµРЅРµРЅРёСЏ РїРµСЂРµРґ Р·Р°РєСЂС‹С‚РёРµРј?", "РЎРѕС…СЂР°РЅРµРЅРёРµ", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
 
         //            if (result == DialogResult.Yes)
         //            {
@@ -260,32 +270,32 @@ namespace Compiler
         //            }
         //            else if (result == DialogResult.Cancel)
         //            {
-        //                return; // Отменяем закрытие вкладки
+        //                return; // РћС‚РјРµРЅСЏРµРј Р·Р°РєСЂС‹С‚РёРµ РІРєР»Р°РґРєРё
         //            }
         //        }
 
-        //        // Удаляем вкладку
+        //        // РЈРґР°Р»СЏРµРј РІРєР»Р°РґРєСѓ
         //        tabControl.TabPages.Remove(currentTab);
         //    }
         //}
-        
+
         private void Tool_tips()
         {
-            toolTip1.SetToolTip(this.Create, "Создать");
-            toolTip1.SetToolTip(this.Open, "Открыть");
-            toolTip1.SetToolTip(this.Save, "Сохранить");
-            toolTip1.SetToolTip(this.Cansel, "Отменить");
-            toolTip1.SetToolTip(this.Repeat, "Повторить");
-            toolTip1.SetToolTip(this.Copy, "Копировать");
-            toolTip1.SetToolTip(this.Cut, "Вырезать");
-            toolTip1.SetToolTip(this.Paste, "Вставить");
-            toolTip1.SetToolTip(this.Start, "Пуск");
-            toolTip1.SetToolTip(this.Help, "Справка");
-            toolTip1.SetToolTip(this.About, "О программе");
-            toolTip1.SetToolTip(this.About, "О программе");
+            toolTip1.SetToolTip(this.Create, "РЎРѕР·РґР°С‚СЊ");
+            toolTip1.SetToolTip(this.Open, "РћС‚РєСЂС‹С‚СЊ");
+            toolTip1.SetToolTip(this.Save, "РЎРѕС…СЂР°РЅРёС‚СЊ");
+            toolTip1.SetToolTip(this.Cansel, "РћС‚РјРµРЅРёС‚СЊ");
+            toolTip1.SetToolTip(this.Repeat, "РџРѕРІС‚РѕСЂРёС‚СЊ");
+            toolTip1.SetToolTip(this.Copy, "РљРѕРїРёСЂРѕРІР°С‚СЊ");
+            toolTip1.SetToolTip(this.Cut, "Р’С‹СЂРµР·Р°С‚СЊ");
+            toolTip1.SetToolTip(this.Paste, "Р’СЃС‚Р°РІРёС‚СЊ");
+            toolTip1.SetToolTip(this.Start, "РџСѓСЃРє");
+            toolTip1.SetToolTip(this.Help, "РЎРїСЂР°РІРєР°");
+            toolTip1.SetToolTip(this.About, "Рћ РїСЂРѕРіСЂР°РјРјРµ");
+            toolTip1.SetToolTip(this.About, "Рћ РїСЂРѕРіСЂР°РјРјРµ");
         }
 
-        private void диагностикаИНейтрализацияToolStripMenuItem_Click(object sender, EventArgs e)
+        private void РґРёР°РіРЅРѕСЃС‚РёРєР°РРќРµР№С‚СЂР°Р»РёР·Р°С†РёСЏToolStripMenuItem_Click(object sender, EventArgs e)
         {
 
         }
@@ -300,12 +310,12 @@ namespace Compiler
             if (openFileDialog1.ShowDialog() == DialogResult.Cancel)
                 return;
             CheckSaveChanges();
-            // получаем выбранный файл
+            // РїРѕР»СѓС‡Р°РµРј РІС‹Р±СЂР°РЅРЅС‹Р№ С„Р°Р№Р»
             string filename = openFileDialog1.FileName;
-            // читаем файл в строку
+            // С‡РёС‚Р°РµРј С„Р°Р№Р» РІ СЃС‚СЂРѕРєСѓ
             string fileText = System.IO.File.ReadAllText(filename);
             richTextBox1.Text = fileText;
-            MessageBox.Show("Файл открыт");
+            MessageBox.Show("Р¤Р°Р№Р» РѕС‚РєСЂС‹С‚");
             dataGridView1.Rows[0].Cells[0].Value = filename;
         }
 
@@ -313,32 +323,31 @@ namespace Compiler
         {
             if (saveFileDialog1.ShowDialog() == DialogResult.Cancel)
                 return;
-            // получаем выбранный файл
+            // РїРѕР»СѓС‡Р°РµРј РІС‹Р±СЂР°РЅРЅС‹Р№ С„Р°Р№Р»
             string filename = saveFileDialog1.FileName;
-            // сохраняем текст в файл
+            // СЃРѕС…СЂР°РЅСЏРµРј С‚РµРєСЃС‚ РІ С„Р°Р№Р»
             System.IO.File.WriteAllText(filename, richTextBox1.Text);
-            MessageBox.Show("Файл сохранен");
+            MessageBox.Show("Р¤Р°Р№Р» СЃРѕС…СЂР°РЅРµРЅ");
             dataGridView1.Rows[0].Cells[0].Value = filePath;
         }
 
-        // Метод для проверки необходимости сохранения изменений
+        // РњРµС‚РѕРґ РґР»СЏ РїСЂРѕРІРµСЂРєРё РЅРµРѕР±С…РѕРґРёРјРѕСЃС‚Рё СЃРѕС…СЂР°РЅРµРЅРёСЏ РёР·РјРµРЅРµРЅРёР№
         private void CheckSaveChanges()
         {
             if (isTextChanged)
             {
-                // Показываем диалоговое окно с предложением сохранить изменения
-                DialogResult result = MessageBox.Show("Сохранить изменения в файле?", "Сохранение", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
+                // РџРѕРєР°Р·С‹РІР°РµРј РґРёР°Р»РѕРіРѕРІРѕРµ РѕРєРЅРѕ СЃ РїСЂРµРґР»РѕР¶РµРЅРёРµРј СЃРѕС…СЂР°РЅРёС‚СЊ РёР·РјРµРЅРµРЅРёСЏ
+                DialogResult result = MessageBox.Show("РЎРѕС…СЂР°РЅРёС‚СЊ РёР·РјРµРЅРµРЅРёСЏ РІ С„Р°Р№Р»Рµ?", "РЎРѕС…СЂР°РЅРµРЅРёРµ", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
 
                 if (result == DialogResult.Yes)
                 {
-                    Save_button(null, null); // Сохраняем файл
+                    Save_button(null, null); // РЎРѕС…СЂР°РЅСЏРµРј С„Р°Р№Р»
                 }
             }
         }
 
         private void Exit_button(object sender, EventArgs e)
         {
-            CheckSaveChanges();
 
             Application.Exit();
         }
@@ -355,64 +364,64 @@ namespace Compiler
             switch (i)
             {
                 case 0:
-                    файлToolStripMenuItem.Text = "File";
-                    создатьToolStripMenuItem.Text = "Create";
-                    открытьToolStripMenuItem.Text = "Open";
-                    сохранитьToolStripMenuItem.Text = "Save";
-                    сохранитьКакToolStripMenuItem.Text = "Save as";
-                    выходToolStripMenuItem.Text = "Exit";
-                    правкаToolStripMenuItem.Text = "Edit";
-                    отменитьToolStripMenuItem.Text = "Undo";
-                    повторитьToolStripMenuItem.Text = "Redo";
-                    вырезатьToolStripMenuItem.Text = "Cut";
-                    копироватьToolStripMenuItem.Text = "Copy";
-                    вставитьToolStripMenuItem.Text = "Paste";
-                    удалитьToolStripMenuItem.Text = "Delete";
-                    выделитьВсеToolStripMenuItem.Text = "Select all";
-                    текстToolStripMenuItem.Text = "Text";
-                    постановкаЗадачиToolStripMenuItem.Text = "Task";
-                    грамматикаToolStripMenuItem.Text = "Grammar";
-                    классификацияГрамматикиToolStripMenuItem.Text = "Grammar classification";
-                    методАнализаToolStripMenuItem.Text = "Aalysis method";
-                    диагностикаИНейтрализацияToolStripMenuItem.Text = "Debag";
-                    текстовыйПримерToolStripMenuItem.Text = "Text example";
-                    списокЛитературыToolStripMenuItem.Text = "Bibliography";
-                    исходныйКодПрограммыToolStripMenuItem.Text = "Source code";
-                    пускToolStripMenuItem.Text = "Run";
-                    справкаToolStripMenuItem.Text = "Help";
-                    вызовСправкиToolStripMenuItem.Text = "Help";
-                    оПрограммеToolStripMenuItem.Text = "About programm";
+                    С„Р°Р№Р»ToolStripMenuItem.Text = "File";
+                    СЃРѕР·РґР°С‚СЊToolStripMenuItem.Text = "Create";
+                    РѕС‚РєСЂС‹С‚СЊToolStripMenuItem.Text = "Open";
+                    СЃРѕС…СЂР°РЅРёС‚СЊToolStripMenuItem.Text = "Save";
+                    СЃРѕС…СЂР°РЅРёС‚СЊРљР°РєToolStripMenuItem.Text = "Save as";
+                    РІС‹С…РѕРґToolStripMenuItem.Text = "Exit";
+                    РїСЂР°РІРєР°ToolStripMenuItem.Text = "Edit";
+                    РѕС‚РјРµРЅРёС‚СЊToolStripMenuItem.Text = "Undo";
+                    РїРѕРІС‚РѕСЂРёС‚СЊToolStripMenuItem.Text = "Redo";
+                    РІС‹СЂРµР·Р°С‚СЊToolStripMenuItem.Text = "Cut";
+                    РєРѕРїРёСЂРѕРІР°С‚СЊToolStripMenuItem.Text = "Copy";
+                    РІСЃС‚Р°РІРёС‚СЊToolStripMenuItem.Text = "Paste";
+                    СѓРґР°Р»РёС‚СЊToolStripMenuItem.Text = "Delete";
+                    РІС‹РґРµР»РёС‚СЊР’СЃРµToolStripMenuItem.Text = "Select all";
+                    С‚РµРєСЃС‚ToolStripMenuItem.Text = "Text";
+                    РїРѕСЃС‚Р°РЅРѕРІРєР°Р—Р°РґР°С‡РёToolStripMenuItem.Text = "Task";
+                    РіСЂР°РјРјР°С‚РёРєР°ToolStripMenuItem.Text = "Grammar";
+                    РєР»Р°СЃСЃРёС„РёРєР°С†РёСЏР“СЂР°РјРјР°С‚РёРєРёToolStripMenuItem.Text = "Grammar classification";
+                    РјРµС‚РѕРґРђРЅР°Р»РёР·Р°ToolStripMenuItem.Text = "Aalysis method";
+                    РґРёР°РіРЅРѕСЃС‚РёРєР°РРќРµР№С‚СЂР°Р»РёР·Р°С†РёСЏToolStripMenuItem.Text = "Debag";
+                    С‚РµРєСЃС‚РѕРІС‹Р№РџСЂРёРјРµСЂToolStripMenuItem.Text = "Text example";
+                    СЃРїРёСЃРѕРєР›РёС‚РµСЂР°С‚СѓСЂС‹ToolStripMenuItem.Text = "Bibliography";
+                    РёСЃС…РѕРґРЅС‹Р№РљРѕРґРџСЂРѕРіСЂР°РјРјС‹ToolStripMenuItem.Text = "Source code";
+                    РїСѓСЃРєToolStripMenuItem.Text = "Run";
+                    СЃРїСЂР°РІРєР°ToolStripMenuItem.Text = "Help";
+                    РІС‹Р·РѕРІРЎРїСЂР°РІРєРёToolStripMenuItem.Text = "Help";
+                    РѕРџСЂРѕРіСЂР°РјРјРµToolStripMenuItem.Text = "About programm";
 
                     break;
 
                 case 1:
-                    файлToolStripMenuItem.Text = "Файл";
-                    создатьToolStripMenuItem.Text = "Создать";
-                    открытьToolStripMenuItem.Text = "Открыть";
-                    сохранитьToolStripMenuItem.Text = "Сохранить";
-                    сохранитьКакToolStripMenuItem.Text = "Сохранить как";
-                    выходToolStripMenuItem.Text = "Выход";
-                    правкаToolStripMenuItem.Text = "Правка";
-                    отменитьToolStripMenuItem.Text = "Отменить";
-                    повторитьToolStripMenuItem.Text = "Повторить";
-                    вырезатьToolStripMenuItem.Text = "Вырезать";
-                    копироватьToolStripMenuItem.Text = "Копировать";
-                    вставитьToolStripMenuItem.Text = "Вставить";
-                    удалитьToolStripMenuItem.Text = "Удалить";
-                    выделитьВсеToolStripMenuItem.Text = "Выделить все";
-                    текстToolStripMenuItem.Text = "Текст";
-                    постановкаЗадачиToolStripMenuItem.Text = "Постановка задачи";
-                    грамматикаToolStripMenuItem.Text = "Грамматика";
-                    классификацияГрамматикиToolStripMenuItem.Text = "Классификация грамматики";
-                    методАнализаToolStripMenuItem.Text = "Метод анализа";
-                    диагностикаИНейтрализацияToolStripMenuItem.Text = "Диагностика и нейтрализация ошибок";
-                    текстовыйПримерToolStripMenuItem.Text = "Текстовый пример";
-                    списокЛитературыToolStripMenuItem.Text = "Список литературы";
-                    исходныйКодПрограммыToolStripMenuItem.Text = "Исходный код программы";
-                    пускToolStripMenuItem.Text = "Пуск";
-                    справкаToolStripMenuItem.Text = "Справка";
-                    вызовСправкиToolStripMenuItem.Text = "Вызов справки";
-                    оПрограммеToolStripMenuItem.Text = "О программе";
+                    С„Р°Р№Р»ToolStripMenuItem.Text = "Р¤Р°Р№Р»";
+                    СЃРѕР·РґР°С‚СЊToolStripMenuItem.Text = "РЎРѕР·РґР°С‚СЊ";
+                    РѕС‚РєСЂС‹С‚СЊToolStripMenuItem.Text = "РћС‚РєСЂС‹С‚СЊ";
+                    СЃРѕС…СЂР°РЅРёС‚СЊToolStripMenuItem.Text = "РЎРѕС…СЂР°РЅРёС‚СЊ";
+                    СЃРѕС…СЂР°РЅРёС‚СЊРљР°РєToolStripMenuItem.Text = "РЎРѕС…СЂР°РЅРёС‚СЊ РєР°Рє";
+                    РІС‹С…РѕРґToolStripMenuItem.Text = "Р’С‹С…РѕРґ";
+                    РїСЂР°РІРєР°ToolStripMenuItem.Text = "РџСЂР°РІРєР°";
+                    РѕС‚РјРµРЅРёС‚СЊToolStripMenuItem.Text = "РћС‚РјРµРЅРёС‚СЊ";
+                    РїРѕРІС‚РѕСЂРёС‚СЊToolStripMenuItem.Text = "РџРѕРІС‚РѕСЂРёС‚СЊ";
+                    РІС‹СЂРµР·Р°С‚СЊToolStripMenuItem.Text = "Р’С‹СЂРµР·Р°С‚СЊ";
+                    РєРѕРїРёСЂРѕРІР°С‚СЊToolStripMenuItem.Text = "РљРѕРїРёСЂРѕРІР°С‚СЊ";
+                    РІСЃС‚Р°РІРёС‚СЊToolStripMenuItem.Text = "Р’СЃС‚Р°РІРёС‚СЊ";
+                    СѓРґР°Р»РёС‚СЊToolStripMenuItem.Text = "РЈРґР°Р»РёС‚СЊ";
+                    РІС‹РґРµР»РёС‚СЊР’СЃРµToolStripMenuItem.Text = "Р’С‹РґРµР»РёС‚СЊ РІСЃРµ";
+                    С‚РµРєСЃС‚ToolStripMenuItem.Text = "РўРµРєСЃС‚";
+                    РїРѕСЃС‚Р°РЅРѕРІРєР°Р—Р°РґР°С‡РёToolStripMenuItem.Text = "РџРѕСЃС‚Р°РЅРѕРІРєР° Р·Р°РґР°С‡Рё";
+                    РіСЂР°РјРјР°С‚РёРєР°ToolStripMenuItem.Text = "Р“СЂР°РјРјР°С‚РёРєР°";
+                    РєР»Р°СЃСЃРёС„РёРєР°С†РёСЏР“СЂР°РјРјР°С‚РёРєРёToolStripMenuItem.Text = "РљР»Р°СЃСЃРёС„РёРєР°С†РёСЏ РіСЂР°РјРјР°С‚РёРєРё";
+                    РјРµС‚РѕРґРђРЅР°Р»РёР·Р°ToolStripMenuItem.Text = "РњРµС‚РѕРґ Р°РЅР°Р»РёР·Р°";
+                    РґРёР°РіРЅРѕСЃС‚РёРєР°РРќРµР№С‚СЂР°Р»РёР·Р°С†РёСЏToolStripMenuItem.Text = "Р”РёР°РіРЅРѕСЃС‚РёРєР° Рё РЅРµР№С‚СЂР°Р»РёР·Р°С†РёСЏ РѕС€РёР±РѕРє";
+                    С‚РµРєСЃС‚РѕРІС‹Р№РџСЂРёРјРµСЂToolStripMenuItem.Text = "РўРµРєСЃС‚РѕРІС‹Р№ РїСЂРёРјРµСЂ";
+                    СЃРїРёСЃРѕРєР›РёС‚РµСЂР°С‚СѓСЂС‹ToolStripMenuItem.Text = "РЎРїРёСЃРѕРє Р»РёС‚РµСЂР°С‚СѓСЂС‹";
+                    РёСЃС…РѕРґРЅС‹Р№РљРѕРґРџСЂРѕРіСЂР°РјРјС‹ToolStripMenuItem.Text = "РСЃС…РѕРґРЅС‹Р№ РєРѕРґ РїСЂРѕРіСЂР°РјРјС‹";
+                    РїСѓСЃРєToolStripMenuItem.Text = "РџСѓСЃРє";
+                    СЃРїСЂР°РІРєР°ToolStripMenuItem.Text = "РЎРїСЂР°РІРєР°";
+                    РІС‹Р·РѕРІРЎРїСЂР°РІРєРёToolStripMenuItem.Text = "Р’С‹Р·РѕРІ СЃРїСЂР°РІРєРё";
+                    РѕРџСЂРѕРіСЂР°РјРјРµToolStripMenuItem.Text = "Рћ РїСЂРѕРіСЂР°РјРјРµ";
 
                     break;
             }
@@ -423,47 +432,47 @@ namespace Compiler
 
         }
 
-        private void классификацияГрамматикиToolStripMenuItem_Click(object sender, EventArgs e)
+        private void РєР»Р°СЃСЃРёС„РёРєР°С†РёСЏР“СЂР°РјРјР°С‚РёРєРёToolStripMenuItem_Click(object sender, EventArgs e)
         {
 
         }
 
         private void Help_button(object sender, EventArgs e)
         {
-            string helpText = "В первой лабораторной работе необходимо, " +
-                "чтобы работали все функции из меню «Файл», «Правка» и «Справка»." +
-                "\r\n\r\nВыполнены 3 доп.Задания: Изменение размеров текста в окне редактирования и окне вывода результатов."+
-                "\r\n\r\nВыбор языка интерфейса приложения (интернационализация)."+
-                "\r\n\r\nОткрытие файла при перетаскивании иконки в окно программы.";
+            string helpText = "Р’ РїРµСЂРІРѕР№ Р»Р°Р±РѕСЂР°С‚РѕСЂРЅРѕР№ СЂР°Р±РѕС‚Рµ РЅРµРѕР±С…РѕРґРёРјРѕ, " +
+                "С‡С‚РѕР±С‹ СЂР°Р±РѕС‚Р°Р»Рё РІСЃРµ С„СѓРЅРєС†РёРё РёР· РјРµРЅСЋ В«Р¤Р°Р№Р»В», В«РџСЂР°РІРєР°В» Рё В«РЎРїСЂР°РІРєР°В»." +
+                "\r\n\r\nР’С‹РїРѕР»РЅРµРЅС‹ 3 РґРѕРї.Р—Р°РґР°РЅРёСЏ: РР·РјРµРЅРµРЅРёРµ СЂР°Р·РјРµСЂРѕРІ С‚РµРєСЃС‚Р° РІ РѕРєРЅРµ СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёСЏ Рё РѕРєРЅРµ РІС‹РІРѕРґР° СЂРµР·СѓР»СЊС‚Р°С‚РѕРІ." +
+                "\r\n\r\nР’С‹Р±РѕСЂ СЏР·С‹РєР° РёРЅС‚РµСЂС„РµР№СЃР° РїСЂРёР»РѕР¶РµРЅРёСЏ (РёРЅС‚РµСЂРЅР°С†РёРѕРЅР°Р»РёР·Р°С†РёСЏ)." +
+                "\r\n\r\nРћС‚РєСЂС‹С‚РёРµ С„Р°Р№Р»Р° РїСЂРё РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРё РёРєРѕРЅРєРё РІ РѕРєРЅРѕ РїСЂРѕРіСЂР°РјРјС‹.";
             MessageBox.Show(helpText);
         }
 
         private void Save_button(object sender, EventArgs e)
         {
-            // Проверяем, создан ли файл
+            // РџСЂРѕРІРµСЂСЏРµРј, СЃРѕР·РґР°РЅ Р»Рё С„Р°Р№Р»
             if (string.IsNullOrEmpty(filePath))
             {
-                DialogResult result = MessageBox.Show("Файл еще не создан. Сначала создайте файл.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                DialogResult result = MessageBox.Show("Р¤Р°Р№Р» РµС‰Рµ РЅРµ СЃРѕР·РґР°РЅ. РЎРЅР°С‡Р°Р»Р° СЃРѕР·РґР°Р№С‚Рµ С„Р°Р№Р».", "РћС€РёР±РєР°", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 if (result == DialogResult.OK)
                     Create_button(null, null);
                 return;
             }
 
-            // Получаем текст из TextBox
+            // РџРѕР»СѓС‡Р°РµРј С‚РµРєСЃС‚ РёР· TextBox
             string textToSave = richTextBox1.Text;
 
             try
             {
-                // Сохраняем текст в файл
+                // РЎРѕС…СЂР°РЅСЏРµРј С‚РµРєСЃС‚ РІ С„Р°Р№Р»
                 File.WriteAllText(filePath, textToSave);
 
-                // Сообщаем пользователю об успешном сохранении
-                MessageBox.Show($"Текст успешно сохранен в файл: {filePath}", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                // РЎРѕРѕР±С‰Р°РµРј РїРѕР»СЊР·РѕРІР°С‚РµР»СЋ РѕР± СѓСЃРїРµС€РЅРѕРј СЃРѕС…СЂР°РЅРµРЅРёРё
+                MessageBox.Show($"РўРµРєСЃС‚ СѓСЃРїРµС€РЅРѕ СЃРѕС…СЂР°РЅРµРЅ РІ С„Р°Р№Р»: {filePath}", "РЈСЃРїРµС…", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
-                // Обрабатываем ошибки
-                MessageBox.Show($"Ошибка при сохранении файла: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                // РћР±СЂР°Р±Р°С‚С‹РІР°РµРј РѕС€РёР±РєРё
+                MessageBox.Show($"РћС€РёР±РєР° РїСЂРё СЃРѕС…СЂР°РЅРµРЅРёРё С„Р°Р№Р»Р°: {ex.Message}", "РћС€РёР±РєР°", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             dataGridView1.Rows[0].Cells[0].Value = filePath;
         }
@@ -471,103 +480,103 @@ namespace Compiler
 
         private void Create_button(object sender, EventArgs e)
         {
-            // Используем SaveFileDialog для выбора места сохранения файла
+            // РСЃРїРѕР»СЊР·СѓРµРј SaveFileDialog РґР»СЏ РІС‹Р±РѕСЂР° РјРµСЃС‚Р° СЃРѕС…СЂР°РЅРµРЅРёСЏ С„Р°Р№Р»Р°
             SaveFileDialog saveFileDialog = new SaveFileDialog();
-            saveFileDialog.Title = "Создать файл";
+            saveFileDialog.Title = "РЎРѕР·РґР°С‚СЊ С„Р°Р№Р»";
             saveFileDialog.Filter = "Text files(*.txt)|*.txt|All files(*.*)|*.*";
 
             if (saveFileDialog.ShowDialog() == DialogResult.OK)
             {
-                // Сохраняем путь к файлу
+                // РЎРѕС…СЂР°РЅСЏРµРј РїСѓС‚СЊ Рє С„Р°Р№Р»Сѓ
                 filePath = saveFileDialog.FileName;
 
-                // Создаем пустой файл
+                // РЎРѕР·РґР°РµРј РїСѓСЃС‚РѕР№ С„Р°Р№Р»
                 File.WriteAllText(filePath, string.Empty);
 
-                // Сообщаем пользователю об успешном создании файла
-                MessageBox.Show($"Файл успешно создан: {filePath}", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                // РЎРѕРѕР±С‰Р°РµРј РїРѕР»СЊР·РѕРІР°С‚РµР»СЋ РѕР± СѓСЃРїРµС€РЅРѕРј СЃРѕР·РґР°РЅРёРё С„Р°Р№Р»Р°
+                MessageBox.Show($"Р¤Р°Р№Р» СѓСЃРїРµС€РЅРѕ СЃРѕР·РґР°РЅ: {filePath}", "РЈСЃРїРµС…", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             dataGridView1.Rows[0].Cells[0].Value = filePath;
         }
 
         private void richTextBox1_TextChanged_1(object sender, EventArgs e)
         {
-            isTextChanged = true; // Устанавливаем флаг изменений
+            isTextChanged = true; // РЈСЃС‚Р°РЅР°РІР»РёРІР°РµРј С„Р»Р°Рі РёР·РјРµРЅРµРЅРёР№
 
             if (undoStack.Count >= MaxStackSize)
             {
-                // Удаляем самое старое состояние
+                // РЈРґР°Р»СЏРµРј СЃР°РјРѕРµ СЃС‚Р°СЂРѕРµ СЃРѕСЃС‚РѕСЏРЅРёРµ
                 var tempStack = new Stack<string>(undoStack.Reverse().Skip(1).Reverse());
                 undoStack = tempStack;
             }
 
-            // Сохраняем текущий текст в стек
+            // РЎРѕС…СЂР°РЅСЏРµРј С‚РµРєСѓС‰РёР№ С‚РµРєСЃС‚ РІ СЃС‚РµРє
             undoStack.Push(richTextBox1.Text);
         }
 
 
-        //Функция отмены
+        //Р¤СѓРЅРєС†РёСЏ РѕС‚РјРµРЅС‹
         private void Cansel_button(object sender, EventArgs e)
         {
             if (undoStack.Count > 1)
             {
-                // Отключаем обработчик TextChanged
+                // РћС‚РєР»СЋС‡Р°РµРј РѕР±СЂР°Р±РѕС‚С‡РёРє TextChanged
                 richTextBox1.TextChanged -= richTextBox1_TextChanged_1;
 
-                // Перемещаем текущее состояние в стек повторения
+                // РџРµСЂРµРјРµС‰Р°РµРј С‚РµРєСѓС‰РµРµ СЃРѕСЃС‚РѕСЏРЅРёРµ РІ СЃС‚РµРє РїРѕРІС‚РѕСЂРµРЅРёСЏ
                 redoStack.Push(undoStack.Pop());
 
-                // Убираем текущее состояние из стека
+                // РЈР±РёСЂР°РµРј С‚РµРєСѓС‰РµРµ СЃРѕСЃС‚РѕСЏРЅРёРµ РёР· СЃС‚РµРєР°
                 undoStack.Pop();
 
-                // Восстанавливаем предыдущее состояние
+                // Р’РѕСЃСЃС‚Р°РЅР°РІР»РёРІР°РµРј РїСЂРµРґС‹РґСѓС‰РµРµ СЃРѕСЃС‚РѕСЏРЅРёРµ
                 richTextBox1.Text = undoStack.Peek();
 
-                // Включаем обработчик TextChanged
+                // Р’РєР»СЋС‡Р°РµРј РѕР±СЂР°Р±РѕС‚С‡РёРє TextChanged
                 richTextBox1.TextChanged += richTextBox1_TextChanged_1;
             }
             else
             {
-                MessageBox.Show("Нечего отменять.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("РќРµС‡РµРіРѕ РѕС‚РјРµРЅСЏС‚СЊ.", "РРЅС„РѕСЂРјР°С†РёСЏ", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
 
-        //Повтор действия
+        //РџРѕРІС‚РѕСЂ РґРµР№СЃС‚РІРёСЏ
         private void Redo(object sender, EventArgs e)
         {
-            if (redoStack.Count > 0) // Проверяем, есть ли что повторять
+            if (redoStack.Count > 0) // РџСЂРѕРІРµСЂСЏРµРј, РµСЃС‚СЊ Р»Рё С‡С‚Рѕ РїРѕРІС‚РѕСЂСЏС‚СЊ
             {
-                // Восстанавливаем состояние из стека повторения
+                // Р’РѕСЃСЃС‚Р°РЅР°РІР»РёРІР°РµРј СЃРѕСЃС‚РѕСЏРЅРёРµ РёР· СЃС‚РµРєР° РїРѕРІС‚РѕСЂРµРЅРёСЏ
                 richTextBox1.Text = redoStack.Peek();
 
-                // Перемещаем состояние обратно в стек отмены
+                // РџРµСЂРµРјРµС‰Р°РµРј СЃРѕСЃС‚РѕСЏРЅРёРµ РѕР±СЂР°С‚РЅРѕ РІ СЃС‚РµРє РѕС‚РјРµРЅС‹
                 undoStack.Push(redoStack.Pop());
 
             }
             else
             {
-                MessageBox.Show("Нечего повторять.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("РќРµС‡РµРіРѕ РїРѕРІС‚РѕСЂСЏС‚СЊ.", "РРЅС„РѕСЂРјР°С†РёСЏ", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
 
-        // Обработчик кнопки "Вырезать"
+        // РћР±СЂР°Р±РѕС‚С‡РёРє РєРЅРѕРїРєРё "Р’С‹СЂРµР·Р°С‚СЊ"
         private void Cut_button(object sender, EventArgs e)
         {
 
-            // Проверяем, есть ли выделенный текст
+            // РџСЂРѕРІРµСЂСЏРµРј, РµСЃС‚СЊ Р»Рё РІС‹РґРµР»РµРЅРЅС‹Р№ С‚РµРєСЃС‚
             if (richTextBox1.SelectionLength > 0)
             {
-                // Вырезаем выделенный текст
+                // Р’С‹СЂРµР·Р°РµРј РІС‹РґРµР»РµРЅРЅС‹Р№ С‚РµРєСЃС‚
                 richTextBox1.Cut();
             }
             else
             {
-                MessageBox.Show("Выделите текст для вырезания.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Р’С‹РґРµР»РёС‚Рµ С‚РµРєСЃС‚ РґР»СЏ РІС‹СЂРµР·Р°РЅРёСЏ.", "РРЅС„РѕСЂРјР°С†РёСЏ", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
 
         }
 
-        //Копирование
+        //РљРѕРїРёСЂРѕРІР°РЅРёРµ
         private void Copy_button(object sender, EventArgs e)
         {
             if (richTextBox1.SelectionLength > 0)
@@ -576,102 +585,102 @@ namespace Compiler
             }
             else
             {
-                MessageBox.Show("Выделите текст для копирования.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Р’С‹РґРµР»РёС‚Рµ С‚РµРєСЃС‚ РґР»СЏ РєРѕРїРёСЂРѕРІР°РЅРёСЏ.", "РРЅС„РѕСЂРјР°С†РёСЏ", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
 
-        //Вставка
+        //Р’СЃС‚Р°РІРєР°
         private void Paste_button(object sender, EventArgs e)
         {
             richTextBox1.Paste();
         }
 
-        //Кнопка удаления всего текста
+        //РљРЅРѕРїРєР° СѓРґР°Р»РµРЅРёСЏ РІСЃРµРіРѕ С‚РµРєСЃС‚Р°
         private void Delete_button(object sender, EventArgs e)
         {
             richTextBox1.Clear();
         }
 
-        //Кнопка выделения всего текста
+        //РљРЅРѕРїРєР° РІС‹РґРµР»РµРЅРёСЏ РІСЃРµРіРѕ С‚РµРєСЃС‚Р°
         private void Select_all_button(object sender, EventArgs e)
         {
             richTextBox1.SelectAll();
         }
 
-        //Изменение шрифта
+        //РР·РјРµРЅРµРЅРёРµ С€СЂРёС„С‚Р°
         private void UpdateTextBoxFont()
         {
             richTextBox1.Font = new Font(richTextBox1.Font.FontFamily, currentFontSize);
-            FontSize.Text = $"Размер шрифта: {currentFontSize}"; // Обновляем Label
+            FontSize.Text = $"Р Р°Р·РјРµСЂ С€СЂРёС„С‚Р°: {currentFontSize}"; // РћР±РЅРѕРІР»СЏРµРј Label
         }
 
 
         private void SizeUP_button(object sender, EventArgs e)
         {
-            currentFontSize += 2; // Увеличиваем размер шрифта на 2 пункта
+            currentFontSize += 2; // РЈРІРµР»РёС‡РёРІР°РµРј СЂР°Р·РјРµСЂ С€СЂРёС„С‚Р° РЅР° 2 РїСѓРЅРєС‚Р°
             UpdateTextBoxFont();
         }
 
         private void SizeDown_button(object sender, EventArgs e)
         {
-            if (currentFontSize > 6) // Минимальный размер шрифта
+            if (currentFontSize > 6) // РњРёРЅРёРјР°Р»СЊРЅС‹Р№ СЂР°Р·РјРµСЂ С€СЂРёС„С‚Р°
             {
-                currentFontSize -= 2; // Уменьшаем размер шрифта на 2 пункта
+                currentFontSize -= 2; // РЈРјРµРЅСЊС€Р°РµРј СЂР°Р·РјРµСЂ С€СЂРёС„С‚Р° РЅР° 2 РїСѓРЅРєС‚Р°
                 UpdateTextBoxFont();
             }
             else
             {
-                MessageBox.Show("Минимальный размер текста достигнут.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("РњРёРЅРёРјР°Р»СЊРЅС‹Р№ СЂР°Р·РјРµСЂ С‚РµРєСЃС‚Р° РґРѕСЃС‚РёРіРЅСѓС‚.", "РРЅС„РѕСЂРјР°С†РёСЏ", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
-        // Обработчик события DragEnter
+        // РћР±СЂР°Р±РѕС‚С‡РёРє СЃРѕР±С‹С‚РёСЏ DragEnter
         private void MainForm_DragEnter(object sender, DragEventArgs e)
         {
-            // Проверяем, что перетаскиваемый объект является файлом
+            // РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ РїРµСЂРµС‚Р°СЃРєРёРІР°РµРјС‹Р№ РѕР±СЉРµРєС‚ СЏРІР»СЏРµС‚СЃСЏ С„Р°Р№Р»РѕРј
             if (e.Data.GetDataPresent(DataFormats.FileDrop))
             {
-                e.Effect = DragDropEffects.Copy; // Разрешаем копирование
+                e.Effect = DragDropEffects.Copy; // Р Р°Р·СЂРµС€Р°РµРј РєРѕРїРёСЂРѕРІР°РЅРёРµ
             }
             else
             {
-                e.Effect = DragDropEffects.None; // Запрещаем перетаскивание
+                e.Effect = DragDropEffects.None; // Р—Р°РїСЂРµС‰Р°РµРј РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРµ
             }
         }
 
-        // Обработчик события DragDrop
+        // РћР±СЂР°Р±РѕС‚С‡РёРє СЃРѕР±С‹С‚РёСЏ DragDrop
         private void MainForm_DragDrop(object sender, DragEventArgs e)
         {
-            // Получаем массив перетаскиваемых файлов
+            // РџРѕР»СѓС‡Р°РµРј РјР°СЃСЃРёРІ РїРµСЂРµС‚Р°СЃРєРёРІР°РµРјС‹С… С„Р°Р№Р»РѕРІ
             string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
 
-            // Проверяем, что перетащен хотя бы один файл
+            // РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ РїРµСЂРµС‚Р°С‰РµРЅ С…РѕС‚СЏ Р±С‹ РѕРґРёРЅ С„Р°Р№Р»
             if (files != null && files.Length > 0)
             {
-                string filePath = files[0]; // Берем первый файл
+                string filePath = files[0]; // Р‘РµСЂРµРј РїРµСЂРІС‹Р№ С„Р°Р№Р»
 
-                // Проверяем, что файл имеет расширение .txt
+                // РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ С„Р°Р№Р» РёРјРµРµС‚ СЂР°СЃС€РёСЂРµРЅРёРµ .txt
                 if (Path.GetExtension(filePath).ToLower() == ".txt")
                 {
                     try
                     {
-                        // Читаем содержимое файла и отображаем его в RichTextBox
+                        // Р§РёС‚Р°РµРј СЃРѕРґРµСЂР¶РёРјРѕРµ С„Р°Р№Р»Р° Рё РѕС‚РѕР±СЂР°Р¶Р°РµРј РµРіРѕ РІ RichTextBox
                         richTextBox1.Text = File.ReadAllText(filePath);
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show($"Ошибка при открытии файла: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show($"РћС€РёР±РєР° РїСЂРё РѕС‚РєСЂС‹С‚РёРё С„Р°Р№Р»Р°: {ex.Message}", "РћС€РёР±РєР°", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
                 else
                 {
-                    MessageBox.Show("Поддерживаются только текстовые файлы (.txt).", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show("РџРѕРґРґРµСЂР¶РёРІР°СЋС‚СЃСЏ С‚РѕР»СЊРєРѕ С‚РµРєСЃС‚РѕРІС‹Рµ С„Р°Р№Р»С‹ (.txt).", "РћС€РёР±РєР°", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
             }
         }
 
         private void About_button(object sender, EventArgs e)
         {
-            string helpText = "Выполнена 1 лабораторная работа";
+            string helpText = "Р’С‹РїРѕР»РЅРµРЅР° 1 Р»Р°Р±РѕСЂР°С‚РѕСЂРЅР°СЏ СЂР°Р±РѕС‚Р°";
             MessageBox.Show(helpText);
         }
 
@@ -684,8 +693,8 @@ namespace Compiler
         {
 
         }
-        #region Парсер
-        //Парсер
+        #region РЎРєР°РЅРµСЂ
+        //РџР°СЂСЃРµСЂ
         //private void Start_Click(object sender, EventArgs e)
         //{
         //    dataGridView1.Rows.Clear();
@@ -701,13 +710,13 @@ namespace Compiler
         //                token.Code,
         //                token.Type,
         //                token.Value,
-        //                $"с {token.StartPosition} по {token.EndPosition}"
+        //                $"СЃ {token.StartPosition} РїРѕ {token.EndPosition}"
         //            );
         //        }
         //    }
         //    catch (Exception ex)
         //    {
-        //        MessageBox.Show($"Ошибка: {ex.Message}");
+        //        MessageBox.Show($"РћС€РёР±РєР°: {ex.Message}");
         //    }
         //}
 
@@ -715,7 +724,7 @@ namespace Compiler
         //{
         //    StringBuilder result = new StringBuilder();
         //    bool inStringLiteral = false;
-        //    bool spaceAdded = true; // Начинаем с true, чтобы не добавлять пробелы в начале
+        //    bool spaceAdded = true; // РќР°С‡РёРЅР°РµРј СЃ true, С‡С‚РѕР±С‹ РЅРµ РґРѕР±Р°РІР»СЏС‚СЊ РїСЂРѕР±РµР»С‹ РІ РЅР°С‡Р°Р»Рµ
 
         //    for (int i = 0; i < input.Length; i++)
         //    {
@@ -766,12 +775,12 @@ namespace Compiler
         //        char current = code[position];
         //        int charPositionInLine = position - lineStartPosition + 1;
 
-        //        // Пропускаем пробелы
+        //        // РџСЂРѕРїСѓСЃРєР°РµРј РїСЂРѕР±РµР»С‹
         //        if (char.IsWhiteSpace(current))
         //        {
 
         //            tokens.Add(new Token(
-        //                5, "Пробел", " ",
+        //                5, "РџСЂРѕР±РµР»", " ",
         //                line, charPositionInLine, charPositionInLine
         //            ));
 
@@ -779,7 +788,7 @@ namespace Compiler
         //            continue;
         //        }
 
-        //        // Обработка букв (идентификаторы и ключевые слова)
+        //        // РћР±СЂР°Р±РѕС‚РєР° Р±СѓРєРІ (РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂС‹ Рё РєР»СЋС‡РµРІС‹Рµ СЃР»РѕРІР°)
         //        if (char.IsLetter(current))
         //        {
         //            int start = position;
@@ -796,21 +805,21 @@ namespace Compiler
         //            if (keyword.ContainsKey(value))
         //            {
         //                tokens.Add(new Token(
-        //                    keyword[value], "Ключевое слово", value,
+        //                    keyword[value], "РљР»СЋС‡РµРІРѕРµ СЃР»РѕРІРѕ", value,
         //                    line, startCharPos, endCharPos
         //                ));
         //            }
         //            else
         //            {
         //                tokens.Add(new Token(
-        //                    4, "Идентификатор", value,
+        //                    4, "РРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ", value,
         //                    line, startCharPos, endCharPos
         //                ));
         //            }
         //            continue;
         //        }
 
-        //        // Обработка чисел (целые и дробные)
+        //        // РћР±СЂР°Р±РѕС‚РєР° С‡РёСЃРµР» (С†РµР»С‹Рµ Рё РґСЂРѕР±РЅС‹Рµ)
         //        if (char.IsDigit(current))
         //        {
         //            int start = position;
@@ -828,38 +837,38 @@ namespace Compiler
 
         //            tokens.Add(new Token(
         //                hasDecimalPoint ? 9 : 8,
-        //                hasDecimalPoint ? "Дробное число" : "Целое число без знака",
+        //                hasDecimalPoint ? "Р”СЂРѕР±РЅРѕРµ С‡РёСЃР»Рѕ" : "Р¦РµР»РѕРµ С‡РёСЃР»Рѕ Р±РµР· Р·РЅР°РєР°",
         //                value,
         //                line, startCharPos, endCharPos
         //            ));
         //            continue;
         //        }
 
-        //        // Обработка операторов
+        //        // РћР±СЂР°Р±РѕС‚РєР° РѕРїРµСЂР°С‚РѕСЂРѕРІ
         //        if (current == ':' && position + 1 < code.Length && code[position + 1] == '=')
         //        {
         //            tokens.Add(new Token(
-        //                7, "Оператор присваивания", ":=",
+        //                7, "РћРїРµСЂР°С‚РѕСЂ РїСЂРёСЃРІР°РёРІР°РЅРёСЏ", ":=",
         //                line, charPositionInLine, charPositionInLine + 1
         //            ));
         //            position += 2;
         //            continue;
         //        }
 
-        //        // Обработка точки с запятой
+        //        // РћР±СЂР°Р±РѕС‚РєР° С‚РѕС‡РєРё СЃ Р·Р°РїСЏС‚РѕР№
         //        if (current == ';')
         //        {
         //            tokens.Add(new Token(
-        //                10, "Конец оператора", ";",
+        //                10, "РљРѕРЅРµС† РѕРїРµСЂР°С‚РѕСЂР°", ";",
         //                line, charPositionInLine, charPositionInLine
         //            ));
         //            position++;
         //            continue;
         //        }
 
-        //        // Обработка недопустимых символов
+        //        // РћР±СЂР°Р±РѕС‚РєР° РЅРµРґРѕРїСѓСЃС‚РёРјС‹С… СЃРёРјРІРѕР»РѕРІ
         //        tokens.Add(new Token(
-        //            11, "Недопустимый символ", current.ToString(),
+        //            11, "РќРµРґРѕРїСѓСЃС‚РёРјС‹Р№ СЃРёРјРІРѕР»", current.ToString(),
         //            line, charPositionInLine, charPositionInLine
         //        ));
         //        position++;
@@ -888,8 +897,529 @@ namespace Compiler
         //    }
         //}
         #endregion
-        #region Сканер
+        #region РџР°СЂСЃРµСЂ
+        //private void Start_Click(object sender, EventArgs e)
+        //{
+        //    string input = richTextBox1.Text.Trim();
+        //    dataGridView1.Rows.Clear();
+        //    AnalyzeSyntax(input);
+        //}
 
+        //private void AnalyzeSyntax(string input)
+        //{
+        //    string[] tokens = Tokenize(input);
+        //    int currentState = 0;
+        //    int position = 0;
+        //    int errorCount = 0;
+        //    bool recoveryMode = false;
+
+        //    for (int i = 0; i < tokens.Length; i++)
+        //    {
+        //        string token = tokens[i];
+        //        int tokenStart = position;
+        //        int tokenEnd = position + token.Length - 1;
+
+        //        if (recoveryMode)
+        //        {
+        //            // Р’ СЂРµР¶РёРјРµ РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёСЏ РїСЂРѕРїСѓСЃРєР°РµРј С‚РѕРєРµРЅС‹, РїРѕРєР° РЅРµ РЅР°Р№РґРµРј РїРѕРґС…РѕРґСЏС‰РёР№
+        //            if (IsRecoveryToken(currentState, token))
+        //            {
+        //                recoveryMode = false;
+        //                i--; // РџРµСЂРµРїСЂРѕРІРµСЂРёРј СЌС‚РѕС‚ С‚РѕРєРµРЅ РІ РЅРѕСЂРјР°Р»СЊРЅРѕРј СЂРµР¶РёРјРµ
+        //                continue;
+        //            }
+        //            position += token.Length;
+        //            continue;
+        //        }
+
+        //        switch (currentState)
+        //        {
+        //            case 0: // РќР°С‡Р°Р»Рѕ -> DECLARE
+        //                if (token == "DECLARE")
+        //                {
+        //                    currentState = 1;
+        //                }
+        //                else
+        //                {
+        //                    AddError("РЎРєР°РЅРµСЂ", ++errorCount, $"{tokenStart}-{tokenEnd}", "РћР¶РёРґР°Р»РѕСЃСЊ РєР»СЋС‡РµРІРѕРµ СЃР»РѕРІРѕ 'DECLARE'");
+        //                    recoveryMode = true;
+        //                }
+        //                break;
+
+        //            case 1: // DECLARE -> РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ
+        //                if (IsIdentifier(token))
+        //                {
+        //                    currentState = 2;
+        //                }
+        //                else
+        //                {
+        //                    AddError("РЎРєР°РЅРµСЂ", ++errorCount, $"{tokenStart}-{tokenEnd}", "РћР¶РёРґР°Р»СЃСЏ РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ РїРѕСЃР»Рµ 'DECLARE'");
+        //                    recoveryMode = true;
+        //                }
+        //                break;
+
+        //            case 2: // РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ -> CONSTANT
+        //                if (token == "CONSTANT")
+        //                {
+        //                    currentState = 3;
+        //                }
+        //                else
+        //                {
+        //                    AddError("РЎРєР°РЅРµСЂ", ++errorCount, $"{tokenStart}-{tokenEnd}", "РћР¶РёРґР°Р»РѕСЃСЊ РєР»СЋС‡РµРІРѕРµ СЃР»РѕРІРѕ 'CONSTANT'");
+        //                    recoveryMode = true;
+        //                }
+        //                break;
+
+        //            case 3: // CONSTANT -> INTEGER/UNSIGNED
+        //                if (token == "INTEGER" || token == "UNSIGNED")
+        //                {
+        //                    currentState = 4;
+        //                }
+        //                else
+        //                {
+        //                    AddError("РЎРєР°РЅРµСЂ", ++errorCount, $"{tokenStart}-{tokenEnd}", "РћР¶РёРґР°Р»РѕСЃСЊ РєР»СЋС‡РµРІРѕРµ СЃР»РѕРІРѕ 'INTEGER' РёР»Рё 'UNSIGNED'");
+        //                    recoveryMode = true;
+        //                }
+        //                break;
+
+        //            case 4: // INTEGER/UNSIGNED -> :=
+        //                if (token == ":=")
+        //                {
+        //                    currentState = 5;
+        //                }
+        //                else
+        //                {
+        //                    AddError("РЎРєР°РЅРµСЂ", ++errorCount, $"{tokenStart}-{tokenEnd}", "РћР¶РёРґР°Р»СЃСЏ РѕРїРµСЂР°С‚РѕСЂ РїСЂРёСЃРІР°РёРІР°РЅРёСЏ ':='");
+        //                    recoveryMode = true;
+        //                }
+        //                break;
+
+        //            case 5: // := -> С‡РёСЃР»Рѕ
+        //                if (IsNumber(token))
+        //                {
+        //                    currentState = 6; // РЈСЃРїРµС€РЅРѕРµ Р·Р°РІРµСЂС€РµРЅРёРµ
+        //                }
+        //                else
+        //                {
+        //                    AddError("РЎРєР°РЅРµСЂ", ++errorCount, $"{tokenStart}-{tokenEnd}", "РћР¶РёРґР°Р»РѕСЃСЊ С†РµР»РѕРµ С‡РёСЃР»Рѕ");
+        //                    recoveryMode = true;
+        //                }
+        //                break;
+        //        }
+
+        //        position += token.Length;
+        //        // РЈС‡РёС‚С‹РІР°РµРј РїСЂРѕР±РµР»С‹ РјРµР¶РґСѓ С‚РѕРєРµРЅР°РјРё
+        //        while (position < input.Length && char.IsWhiteSpace(input[position]))
+        //        {
+        //            position++;
+        //        }
+        //    }
+
+        //    // РџСЂРѕРІРµСЂРєР° Р·Р°РІРµСЂС€РµРЅРёСЏ
+        //    if (currentState != 6)
+        //    {
+        //        AddError("РЎРєР°РЅРµСЂ", ++errorCount, "РєРѕРЅРµС† СЃС‚СЂРѕРєРё", "РќРµР·Р°РІРµСЂС€РµРЅРЅРѕРµ РѕР±СЉСЏРІР»РµРЅРёРµ");
+        //    }
+        //}
+
+        //private bool IsRecoveryToken(int currentState, string token)
+        //{
+        //    switch (currentState)
+        //    {
+        //        case 0: return token == "DECLARE";
+        //        case 1: return IsIdentifier(token);
+        //        case 2: return token == "CONSTANT";
+        //        case 3: return token == "INTEGER" || token == "UNSIGNED";
+        //        case 4: return token == ":=";
+        //        case 5: return IsNumber(token);
+        //        default: return false;
+        //    }
+        //}
+
+        //private void AddError(string component, int number, string position, string message)
+        //{
+        //    dataGridView1.Rows.Add(component, number, position, message);
+        //}
+
+        //private string[] Tokenize(string input)
+        //{
+        //    List<string> tokens = new List<string>();
+        //    int i = 0;
+
+        //    while (i < input.Length)
+        //    {
+        //        // РџСЂРѕРїСѓСЃРєР°РµРј РїСЂРѕР±РµР»С‹
+        //        if (char.IsWhiteSpace(input[i]))
+        //        {
+        //            i++;
+        //            continue;
+        //        }
+
+        //        // РћРїРµСЂР°С‚РѕСЂ РїСЂРёСЃРІР°РёРІР°РЅРёСЏ
+        //        if (i + 1 < input.Length && input.Substring(i, 2) == ":=")
+        //        {
+        //            tokens.Add(":=");
+        //            i += 2;
+        //            continue;
+        //        }
+
+        //        // РљР»СЋС‡РµРІС‹Рµ СЃР»РѕРІР° Рё РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂС‹
+        //        if (char.IsLetter(input[i]))
+        //        {
+        //            int start = i;
+        //            while (i < input.Length && (char.IsLetterOrDigit(input[i]) || input[i] == '_'))
+        //            {
+        //                i++;
+        //            }
+        //            string word = input.Substring(start, i - start);
+        //            tokens.Add(word.ToUpper()); // РџСЂРёРІРѕРґРёРј Рє РІРµСЂС…РЅРµРјСѓ СЂРµРіРёСЃС‚СЂСѓ РґР»СЏ СЃСЂР°РІРЅРµРЅРёСЏ
+        //            continue;
+        //        }
+
+        //        // Р§РёСЃР»Р°
+        //        if (char.IsDigit(input[i]))
+        //        {
+        //            int start = i;
+        //            while (i < input.Length && char.IsDigit(input[i]))
+        //            {
+        //                i++;
+        //            }
+        //            tokens.Add(input.Substring(start, i - start));
+        //            continue;
+        //        }
+
+        //        // РћРґРёРЅРѕС‡РЅС‹Рµ СЃРёРјРІРѕР»С‹ (РЅР°РїСЂРёРјРµСЂ, С‚РѕС‡РєР° СЃ Р·Р°РїСЏС‚РѕР№)
+        //        tokens.Add(input[i].ToString());
+        //        i++;
+        //    }
+
+        //    return tokens.ToArray();
+        //}
+
+        //private bool IsIdentifier(string token)
+        //{
+        //    if (string.IsNullOrEmpty(token)) return false;
+        //    if (!char.IsLetter(token[0]) && token[0] != '_') return false;
+
+        //    foreach (char c in token)
+        //    {
+        //        if (!char.IsLetterOrDigit(c) && c != '_') return false;
+        //    }
+
+        //    // РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ СЌС‚Рѕ РЅРµ РєР»СЋС‡РµРІРѕРµ СЃР»РѕРІРѕ
+        //    string upperToken = token.ToUpper();
+        //    return upperToken != "DECLARE" && upperToken != "CONSTANT" &&
+        //           upperToken != "INTEGER" && upperToken != "UNSIGNED" &&
+        //           upperToken != "END" && upperToken != "ASSIGN";
+        //}
+
+        //private bool IsNumber(string token)
+        //{
+        //    return int.TryParse(token, out _);
+        //}
+        //}
         #endregion
+        private void Start_Click(object sender, EventArgs e)
+        {
+
+            dataGridView1.Rows.Clear();
+
+            try
+            {
+                // РџРѕР»СѓС‡Р°РµРј РІСЃРµ СЃС‚СЂРѕРєРё РёР· richTextBox1
+                string[] lines = richTextBox1.Lines;
+                int count = 1;
+                // РћР±СЂР°Р±Р°С‚С‹РІР°РµРј РєР°Р¶РґСѓСЋ СЃС‚СЂРѕРєСѓ РѕС‚РґРµР»СЊРЅРѕ
+                for (int lineNumber = 0; lineNumber < lines.Length; lineNumber++)
+                {
+                    string line = lines[lineNumber];
+                    // Р•СЃР»Рё РЅСѓР¶РЅРѕ СѓРґР°Р»СЏС‚СЊ РЅРµР·РЅР°С‡РёС‚РµР»СЊРЅС‹Рµ РїСЂРѕР±РµР»С‹, СЂР°СЃРєРѕРјРјРµРЅС‚РёСЂСѓР№С‚Рµ СЃР»РµРґСѓСЋС‰СѓСЋ СЃС‚СЂРѕРєСѓ
+                    // line = RemoveInsignificantSpaces(line);
+
+                    List<Token> tokens = Parse(line);
+                    
+                    foreach (Token token in tokens)
+                    {
+                        // Р”РѕР±Р°РІР»СЏРµРј РёРЅС„РѕСЂРјР°С†РёСЋ Рѕ СЃС‚СЂРѕРєРµ РІ dataGridView1
+                        dataGridView1.Rows.Add(
+                            lineNumber + 1, // РќСѓРјРµСЂР°С†РёСЏ СЃС‚СЂРѕРє РЅР°С‡РёРЅР°РµС‚СЃСЏ СЃ 1
+                            $"СЃ {token.StartPosition} РїРѕ {token.EndPosition}",
+                            token.Messege,
+                            count++
+                        );
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"РћС€РёР±РєР°: {ex.Message}");
+            }
+        }
+        private List<Token> Parse(string code)
+        {
+            List<Token> tokens = new List<Token>();
+
+            int line = 1;
+            int lineStartPosition = 0;
+            int currentState = 0;
+            int position = 0;
+            while (position < code.Length)
+            {
+                char current = code[position];
+                int charPositionInLine = position - lineStartPosition;
+                switch (currentState)
+                {
+                    case 0://РџСЂРѕРІРµСЂРєР° РЅР° DECLARE
+                        while (char.IsWhiteSpace(current))
+                        {
+                            position++;
+                            current = code[position];
+                        }
+                        lineStartPosition = position;
+                        bool contains = code.Contains("DECLARE ");
+                        if (contains)
+                        {
+                            position = find("DECLARE ", code);
+                            if (lineStartPosition != position)
+                                tokens.Add(new Token(
+                                    line, lineStartPosition, position, "РћР¶РёРґР°Р»РѕСЃСЊ DECLARE"
+                                ));
+                            position += 7;
+                        }
+                        currentState = 1;
+                        break;
+
+                    case 1://РџСЂРѕРІРµСЂРєР° РЅР° РёРЅРґРёС„РёРєР°С‚РѕСЂ
+                        while (char.IsWhiteSpace(current))
+                        {
+                            position++;
+                            current = code[position];
+                        }
+                        lineStartPosition = position;
+                        while (position < code.Length && (char.IsLetterOrDigit(code[position]) || code[position] == '_') && code[position] != ' ')
+                        {
+                            position++;
+                        }
+                        if (position == lineStartPosition)
+                            tokens.Add(new Token(
+                                line, lineStartPosition, position, "РћР¶РёРґР°Р»СЃСЏ РёРЅРґРёС„РёРєР°С‚РѕСЂ РїРѕСЃР»Рµ DECLARE"
+                            ));
+                        currentState = 2;
+                        break;
+
+                    case 2://РџСЂРѕРІРµСЂРєР° РЅР° CONSTANT
+                        // РџСЂРѕРїСѓСЃРєР°РµРј РїСЂРѕР±РµР»С‹
+                        while (char.IsWhiteSpace(current))
+                        {
+                            position++;
+                            current = code[position];
+                        }
+
+                        lineStartPosition = position;
+                        contains = code.Contains(" CONSTANT ");
+                        if (contains)
+                        {
+                            position = find(" CONSTANT ", code) + 1;
+                            if (lineStartPosition != position)
+                                tokens.Add(new Token(
+                                    line, lineStartPosition, position, "РћР¶РёРґР°Р»СЃСЏ CONSTANT РїРѕСЃР»Рµ РёРЅРґРµС„РёРєР°С‚РѕСЂР°"
+                                ));
+                            position += 8;
+                        }
+                        else
+                        {
+                            position = find(" NUMERIC ", code) + 1;
+                            tokens.Add(new Token(
+                                    line, lineStartPosition, position, "РћР¶РёРґР°Р»СЃСЏ CONSTANT РїРѕСЃР»Рµ РёРЅРґРµС„РёРєР°С‚РѕСЂР°"
+                                ));
+                        }
+                        currentState = 3;
+                        break;
+
+                    case 3://РџСЂРѕРІРµСЂРєР° РЅР° NUMERIC
+                        // РџСЂРѕРїСѓСЃРєР°РµРј РїСЂРѕР±РµР»С‹
+                        while (char.IsWhiteSpace(current))
+                        {
+                            position++;
+                            current = code[position];
+                        }
+
+                        lineStartPosition = position;
+                        contains = code.Contains(" NUMERIC ");
+                        if (contains)
+                        {
+                            position = find(" NUMERIC ", code) + 1;
+                            if (lineStartPosition != position)
+                                tokens.Add(new Token(
+                                    line, lineStartPosition, position, "РћР¶РёРґР°Р»СЃСЏ NUMERIC РїРѕСЃР»Рµ CONSTANT"
+                                ));
+                            position += 7;
+                        }
+                        else
+                        {
+                            position = find(" := ", code) + 1;
+                            tokens.Add(new Token(
+                                    line, lineStartPosition, position, "РћР¶РёРґР°Р»СЃСЏ NUMERIC РїРѕСЃР»Рµ CONSTANT"
+                                ));
+                        }
+                        currentState = 4;
+                        break;
+
+                    case 4: //РџСЂРѕРІРµСЂРєР° РЅР° РѕРїРµСЂР°С‚РѕСЂ РїСЂРёСЃРІР°РёРІР°РЅРёСЏ
+                        // РџСЂРѕРїСѓСЃРєР°РµРј РїСЂРѕР±РµР»С‹
+                        while (char.IsWhiteSpace(current))
+                        {
+                            position++;
+                            current = code[position];
+                        }
+
+                        lineStartPosition = position;
+                        contains = code.Contains(" := ");
+                        if (contains)
+                        {
+                            position = find(" := ", code) + 1;
+                            if (lineStartPosition != position)
+                                tokens.Add(new Token(
+                                    line, lineStartPosition, position, "РћР¶РёРґР°Р»РѕСЃСЊ := РїРѕСЃР»Рµ NUMERIC"
+                                ));
+                            position += 2;
+                        }
+                        else
+                        {
+                            position = find(";", code) + 1;
+                            tokens.Add(new Token(
+                                    line, lineStartPosition, position, "РћР¶РёРґР°Р»РѕСЃСЊ := РїРѕСЃР»Рµ NUMERIC"
+                                ));
+                        }
+
+                        currentState = 5;
+                        break;
+
+                    case 5: //РџСЂРѕРІРµСЂРєР° РЅР° РґСЂРѕР±РЅРѕРµ С‡РёСЃР»Рѕ 
+                        // РџСЂРѕРїСѓСЃРєР°РµРј РїСЂРѕР±РµР»С‹
+                        while (char.IsWhiteSpace(current))
+                        {
+                            position++;
+                            current = code[position];
+                        }
+
+                        lineStartPosition = position;
+                        while (position < code.Length && (!char.IsDigit(code[position]))) { position++; }//РїРѕРєР° РЅРµ РґРѕР№РґРµРј РґРѕ С‡РёСЃР»Р° СѓРІРµР»РёС‡РёРІР°РµРј РїРѕР·РёС†РёСЋ
+
+                        if (lineStartPosition != position) //РµСЃР»Рё РїСЂРµРґС‹РґСѓС‰РёР№ С†РёРєР» СЃСЂР°Р±РѕС‚Р°Р», С‚Рѕ РІС‹РІРѕРґРёРј РѕС€РёР±РєСѓ
+                            tokens.Add(new Token(
+                                line, lineStartPosition, position, "РћР¶РёРґР°Р»РѕСЃСЊ РґСЂРѕР±РЅРѕРµ С‡РёСЃР»Рѕ РїРѕСЃР»Рµ :="
+                            ));
+
+                        while (position < code.Length && (char.IsDigit(code[position]) || (code[position] == '.')))
+                        {
+                            position++;
+                        }
+                        if (lineStartPosition != position)
+                        {
+                            string temp = code.Substring(lineStartPosition, position - lineStartPosition);
+                            if (!temp.Contains("."))
+                                tokens.Add(new Token(
+                                    line, lineStartPosition, position, "Р’РІРµРґРµРЅРѕ С†РµР»РѕРµ С†РёСЃР»Рѕ. РћР¶РёРґР°Р»РѕСЃСЊ РґСЂРѕР±РЅРѕРµ"
+                                ));
+                        }
+                        //position--;
+                        currentState = 6;
+                        if (position == code.Length)
+                            tokens.Add(new Token(
+                                    line, lineStartPosition, position, "РћР¶РёРґР°Р»СЃСЏ ; РїРѕСЃР»Рµ РґСЂРѕР±РЅРѕРіРѕ С‡РёСЃР»Р°"
+                                ));
+                        break;
+
+                    case 6:
+                        // РџСЂРѕРїСѓСЃРєР°РµРј РїСЂРѕР±РµР»С‹
+                        while (char.IsWhiteSpace(current))
+                        {
+                            position++;
+                            current = code[position];
+                        }
+                        lineStartPosition = position;
+                        if (code.Contains(";"))
+                        {
+                            position = find(";", code);
+                            if (lineStartPosition != position)
+                                tokens.Add(new Token(
+                                    line, lineStartPosition, position, "РћР¶РёРґР°Р»СЃСЏ ; РїРѕСЃР»Рµ РґСЂРѕР±РЅРѕРіРѕ С‡РёСЃР»Р°"
+                                ));
+                        }
+                        if (!(code.Contains(";")))
+                        {
+                            tokens.Add(new Token(
+                                    line, lineStartPosition, position, "РћР¶РёРґР°Р»СЃСЏ ; РїРѕСЃР»Рµ РґСЂРѕР±РЅРѕРіРѕ С‡РёСЃР»Р°"
+                                ));
+                        }
+                        position += 1;
+                        currentState = 7;
+                        break;
+                }
+            }
+            return tokens;
+        }
+        private int find(string fs, string code)
+        {
+            return code.IndexOf(fs);
+        }
+        private string RemoveInsignificantSpaces(string input)
+        {
+            StringBuilder result = new StringBuilder();
+            bool inStringLiteral = false;
+            bool spaceAdded = true; // РќР°С‡РёРЅР°РµРј СЃ true, С‡С‚РѕР±С‹ РЅРµ РґРѕР±Р°РІР»СЏС‚СЊ РїСЂРѕР±РµР»С‹ РІ РЅР°С‡Р°Р»Рµ
+
+            for (int i = 0; i < input.Length; i++)
+            {
+                char c = input[i];
+
+                if (c == '\'')
+                {
+                    inStringLiteral = !inStringLiteral;
+                    result.Append(c);
+                    spaceAdded = false;
+                }
+                else if (inStringLiteral)
+                {
+                    result.Append(c);
+                    spaceAdded = false;
+                }
+                else if (char.IsWhiteSpace(c))
+                {
+                    if (!spaceAdded && (i + 1 < input.Length) && !IsOperatorChar(input[i + 1]))
+                    {
+                        result.Append(' ');
+                        spaceAdded = true;
+                    }
+                }
+                else
+                {
+                    result.Append(c);
+                    spaceAdded = false;
+                }
+            }
+
+            return result.ToString().Trim();
+        }
+        private bool IsOperatorChar(char c)
+        {
+            return c == ':' || c == '=' || c == '+' || c == '-' || c == '*' || c == '/' || c == ';';
+        }
+        private class Token
+        {
+            public int Line { get; }
+            public int StartPosition { get; }
+            public int EndPosition { get; }
+            public string Messege { get; }
+
+            public Token(int line, int startPos, int endPos, string messege)
+            {
+                Line = line;
+                StartPosition = startPos;
+                EndPosition = endPos;
+                Messege = messege;
+            }
+        }
     }
 }

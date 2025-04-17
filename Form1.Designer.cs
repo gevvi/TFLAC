@@ -602,24 +602,24 @@ namespace Compiler
             // 
             // Filepath
             // 
-            this.Filepath.HeaderText = "Код";
+            this.Filepath.HeaderText = "Строка";
             this.Filepath.Name = "Filepath";
             this.Filepath.ReadOnly = true;
             // 
             // Line
             // 
-            this.Line.HeaderText = "Тип лексемы";
+            this.Line.HeaderText = "Индекс";
             this.Line.Name = "Line";
             // 
             // Column
             // 
-            this.Column.HeaderText = "Лексема";
+            this.Column.HeaderText = "Ошибка";
             this.Column.Name = "Column";
             this.Column.ReadOnly = true;
             // 
             // Message
             // 
-            this.Message.HeaderText = "Местоположение";
+            this.Message.HeaderText = "Счетчик ошибок";
             this.Message.Name = "Message";
             this.Message.ReadOnly = true;
             // 
