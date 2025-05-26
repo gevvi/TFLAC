@@ -173,3 +173,67 @@ num → digit {digit}
 ![image](https://github.com/user-attachments/assets/57fd318a-549f-41e0-84f2-9502fafcbb71)
 
 рис.12 Граф автомата
+
+---
+
+# Лабораторная работа 7
+
+**Тема лабораторной работы:** Преобразование и анализ кода с использованием Clang и LLVM.
+
+**Цель работы:** Познакомиться с инструментами Clang и LLVM, научиться собирать AST и IR-промежуточное представление кода на C/C++, а также извлекать базовую информацию о программе.
+
+**Задание:** 
+
+1. Установить Clang и LLVM;
+
+2. Скомпилировать простой C-файл с использованием clang и получить его: абстрактное синтаксическое дерево (AST), промежуточное представление LLVM IR;
+
+3. Использовать opt для применения базовой комплексной оптимизации (например, О2);
+
+4. Построить граф потока управления (CFG) для оптимизированной программы;
+  
+5. Проанализировать результат, сделать выводы и ответить на контрольные вопросы.
+
+![image](https://github.com/user-attachments/assets/9fc8b18a-aedf-4711-a662-9eaca765b9b3)
+
+рис.13
+
+![image](https://github.com/user-attachments/assets/ca646957-c20e-4f91-9722-71b7f7bb1774)
+
+
+рис.14
+
+![image](https://github.com/user-attachments/assets/2d0041d5-bb08-44b0-bec5-6f1085a192c5)
+
+рис.15
+
+![image](https://github.com/user-attachments/assets/00dfee0e-ee92-4f8b-8627-78022ad1f996)
+
+рис.16
+
+![image](https://github.com/user-attachments/assets/add14b1a-381e-47b3-960f-eabe92150243)
+
+рис.17
+
+![image](https://github.com/user-attachments/assets/652cfac0-a2a3-45d6-9bbf-0e63d3f7380a)
+
+рис.18
+
+![image](https://github.com/user-attachments/assets/0306289d-a191-497a-a473-e24df581a940)
+
+рис.19
+
+![image](https://github.com/user-attachments/assets/ea747c86-9337-4073-b023-35c3b65cb18f)
+
+рис.20
+
+![image](https://github.com/user-attachments/assets/0bc8b62e-73fb-4563-a7df-5698e3247d83)
+
+рис.21
+
+![image](https://github.com/user-attachments/assets/7dfb7f5b-9b28-4165-afb2-c3ff39ba34c4)
+
+рис.22
+
+
+рис.23
