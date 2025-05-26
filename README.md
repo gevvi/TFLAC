@@ -200,32 +200,31 @@ num → digit {digit}
 
 ![image](https://github.com/user-attachments/assets/ca646957-c20e-4f91-9722-71b7f7bb1774)
 
-
-рис.14 Получение AST
+рис.14 Файла main.c
 
 ![image](https://github.com/user-attachments/assets/2d0041d5-bb08-44b0-bec5-6f1085a192c5)
 
-рис.15 Генерация LLVM IR
+рис.15 Получение AST Содержимое 
 
 ![image](https://github.com/user-attachments/assets/00dfee0e-ee92-4f8b-8627-78022ad1f996)
 
-рис.16 Создание main_O0.ll
+рис.16 Генерация LLVM IR
 
 ![image](https://github.com/user-attachments/assets/add14b1a-381e-47b3-960f-eabe92150243)
 
-рис.17 Создание main_O2.ll
+рис.17 Создание main_O0.ll 
 
 ![image](https://github.com/user-attachments/assets/652cfac0-a2a3-45d6-9bbf-0e63d3f7380a)
 
-рис.18 Сравнение двух файлов
+рис.18 Создание main_O2.ll
 
 ![image](https://github.com/user-attachments/assets/0306289d-a191-497a-a473-e24df581a940)
 
-рис.19 Команда для генерации оптимизированного 
+рис.19 Сравнение двух файлов
 
 ![image](https://github.com/user-attachments/assets/ea747c86-9337-4073-b023-35c3b65cb18f)
 
-рис.20 Команда для генерации .dot-файлов CFG для функций
+рис.20 Команда для генерации .dot-файлов CFG для функций 
 
 ![image](https://github.com/user-attachments/assets/39a50542-5122-44f6-a8b3-cc75e3e5e80b)
 
@@ -235,7 +234,7 @@ num → digit {digit}
 ![image](https://github.com/user-attachments/assets/a3b584ed-90c4-4289-babe-5b42b9c5d02e)
 
 
-рис.22 Команды для преобразования файлов с расширением .dot в .png
+рис.22 main.ll
 
 ![image](https://github.com/user-attachments/assets/0bc8b62e-73fb-4563-a7df-5698e3247d83)
 
