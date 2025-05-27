@@ -233,12 +233,15 @@ num → digit {digit}
 
 ![image](https://github.com/user-attachments/assets/a3b584ed-90c4-4289-babe-5b42b9c5d02e)
 
-
 рис.22 main.ll
 
 ![image](https://github.com/user-attachments/assets/0bc8b62e-73fb-4563-a7df-5698e3247d83)
 
 рис.23 xdg-open cfg_main.png
+
+![image](https://github.com/user-attachments/assets/7dfb7f5b-9b28-4165-afb2-c3ff39ba34c4)
+
+рис.24 xdg-open cfg_square.png
 
 ## Ответы на контрольные вопросы
 ### 1. Что такое Clang, и какова его роль в процессе компиляции программ?  
@@ -287,8 +290,4 @@ SSA-форма (Static Single Assignment) — это представление 
 2. Точный контроль потока — CFG явно показывает ветвления и циклы, упрощая анализ достижимости и удаление мёртвого кода.  
 3. Низкоуровневые возможности — IR ближе к машинному коду, что позволяет оптимизировать даже «неочевидные» случаи (например, замену деления на сдвиги).   
 Пример: На C компилятору сложно доказать, что цикл for (int i=0; i<10; i++) всегда выполнится 10 раз, а в IR это сразу видно в CFG и SSA-форме.
-
-![image](https://github.com/user-attachments/assets/7dfb7f5b-9b28-4165-afb2-c3ff39ba34c4)
-
-рис.24 xdg-open cfg_square.png
 
