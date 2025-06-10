@@ -1,5 +1,17 @@
-﻿using System.Text;
+﻿using System.Collections.Generic;
+using System.Drawing;
+using System.IO;
+using System;
+using System.Text.RegularExpressions;
+using System.Windows.Forms;
+using System.Linq;
+using System.Globalization;
+using System.Text;
+using System.Diagnostics;
+
+using System.Data;
 using Application = System.Windows.Forms.Application;
+
 
 namespace Compiler
 {
@@ -378,15 +390,7 @@ namespace Compiler
                     вставитьToolStripMenuItem.Text = "Paste";
                     удалитьToolStripMenuItem.Text = "Delete";
                     выделитьВсеToolStripMenuItem.Text = "Select all";
-                    текстToolStripMenuItem.Text = "Text";
-                    постановкаЗадачиToolStripMenuItem.Text = "Task";
-                    грамматикаToolStripMenuItem.Text = "Grammar";
-                    классификацияГрамматикиToolStripMenuItem.Text = "Grammar classification";
-                    методАнализаToolStripMenuItem.Text = "Aalysis method";
-                    диагностикаИНейтрализацияToolStripMenuItem.Text = "Debag";
-                    текстовыйПримерToolStripMenuItem.Text = "Text example";
-                    списокЛитературыToolStripMenuItem.Text = "Bibliography";
-                    исходныйКодПрограммыToolStripMenuItem.Text = "Source code";
+
                     пускToolStripMenuItem.Text = "Run";
                     справкаToolStripMenuItem.Text = "Help";
                     вызовСправкиToolStripMenuItem.Text = "Help";
@@ -409,15 +413,7 @@ namespace Compiler
                     вставитьToolStripMenuItem.Text = "Вставить";
                     удалитьToolStripMenuItem.Text = "Удалить";
                     выделитьВсеToolStripMenuItem.Text = "Выделить все";
-                    текстToolStripMenuItem.Text = "Текст";
-                    постановкаЗадачиToolStripMenuItem.Text = "Постановка задачи";
-                    грамматикаToolStripMenuItem.Text = "Грамматика";
-                    классификацияГрамматикиToolStripMenuItem.Text = "Классификация грамматики";
-                    методАнализаToolStripMenuItem.Text = "Метод анализа";
-                    диагностикаИНейтрализацияToolStripMenuItem.Text = "Диагностика и нейтрализация ошибок";
-                    текстовыйПримерToolStripMenuItem.Text = "Текстовый пример";
-                    списокЛитературыToolStripMenuItem.Text = "Список литературы";
-                    исходныйКодПрограммыToolStripMenuItem.Text = "Исходный код программы";
+
                     пускToolStripMenuItem.Text = "Пуск";
                     справкаToolStripMenuItem.Text = "Справка";
                     вызовСправкиToolStripMenuItem.Text = "Вызов справки";
@@ -693,733 +689,535 @@ namespace Compiler
         {
 
         }
-        #region Сканер
-        //Парсер
-        //private void Start_Click(object sender, EventArgs e)
-        //{
-        //    dataGridView1.Rows.Clear();
+        private void InitializeDataGridView()
+        {
+            // Настройка столбцов DataGridView
+            dataGridView1.Columns.Clear();
+            dataGridView1.Columns.Add("Type", "Тип");
+            dataGridView1.Columns.Add("Value", "Значение");
+            dataGridView1.Columns.Add("Position", "Позиция");
 
-        //    try
-        //    {
-        //        string code = RemoveInsignificantSpaces(richTextBox1.Text);
-        //        List<Token> tokens = Scan(code);
+            // Настройка внешнего вида
+            dataGridView1.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dataGridView1.RowHeadersVisible = false;
+            dataGridView1.BackgroundColor = Color.White;
+        }
 
-        //        foreach (Token token in tokens)
-        //        {
-        //            dataGridView1.Rows.Add(
-        //                token.Code,
-        //                token.Type,
-        //                token.Value,
-        //                $"с {token.StartPosition} по {token.EndPosition}"
-        //            );
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        MessageBox.Show($"Ошибка: {ex.Message}");
-        //    }
-        //}
+        
+        private DataTable tokenTable;
 
-        //private string RemoveInsignificantSpaces(string input)
-        //{
-        //    StringBuilder result = new StringBuilder();
-        //    bool inStringLiteral = false;
-        //    bool spaceAdded = true; // Начинаем с true, чтобы не добавлять пробелы в начале
+        public void LexicalAnalyzer()
+        {
+            // Инициализация таблицы для вывода результатов
+            tokenTable = new DataTable();
+            dataGridView1.Columns.Clear();
+            tokenTable.Columns.Clear();
+            tokenTable.Columns.Add("Лексема", typeof(string));
+            tokenTable.Columns.Add("Тип", typeof(string));
+            tokenTable.Columns.Add("Позиция", typeof(int));
+        }
+        public void Analyze(RichTextBox richTextBox, DataGridView dataGridView)
+        {
+            tokenTable.Rows.Clear(); // Очищаем таблицу перед новым анализом
 
-        //    for (int i = 0; i < input.Length; i++)
-        //    {
-        //        char c = input[i];
+            string input = richTextBox.Text;
+            int position = 0;
+            bool hasErrors = false;
 
-        //        if (c == '\'')
-        //        {
-        //            inStringLiteral = !inStringLiteral;
-        //            result.Append(c);
-        //            spaceAdded = false;
-        //        }
-        //        else if (inStringLiteral)
-        //        {
-        //            result.Append(c);
-        //            spaceAdded = false;
-        //        }
-        //        else if (char.IsWhiteSpace(c))
-        //        {
-        //            if (!spaceAdded && (i + 1 < input.Length) && !IsOperatorChar(input[i + 1]))
-        //            {
-        //                result.Append(' ');
-        //                spaceAdded = true;
-        //            }
-        //        }
-        //        else
-        //        {
-        //            result.Append(c);
-        //            spaceAdded = false;
-        //        }
-        //    }
+            // Регулярные выражения для лексем
+            var tokenPatterns = new Dictionary<string, string>
+        {
+            {"ID", @"^[a-zA-Z][a-zA-Z0-9]*"},       // Идентификаторы (латинские буквы и цифры)
+            {"POW", @"^\^"},                        // Оператор степени
+            {"MULT", @"^[\*/]"},                   // Операторы умножения/деления
+            {"PLUS", @"^\+"},                       // Оператор сложения
+            {"DOT", @"^\."},                        // Точка
+            {"WHITESPACE", @"^\s+"},                // Пробельные символы
+            {"RUSSIAN", @"^[а-яА-ЯёЁ]"},           // Русские буквы
+            {"INVALID", @"^[^\s\w\^\*\/\+\.]"}     // Недопустимые символы (все кроме разрешенных)
+        };
 
-        //    return result.ToString().Trim();
-        //}
+            while (position < input.Length)
+            {
+                bool matched = false;
 
-        //private bool IsOperatorChar(char c)
-        //{
-        //    return c == ':' || c == '=' || c == '+' || c == '-' || c == '*' || c == '/' || c == ';';
-        //}
-        //private List<Token> Scan(string code)
-        //{
-        //    List<Token> tokens = new List<Token>();
-        //    int position = 0;
-        //    int line = 1;
-        //    int lineStartPosition = 0;
+                // Сначала проверяем на ошибки (русские буквы и недопустимые символы)
+                var errorMatch = Regex.Match(input.Substring(position), tokenPatterns["RUSSIAN"]);
+                if (errorMatch.Success && errorMatch.Index == 0)
+                {
+                    string errorChar = errorMatch.Value;
+                    tokenTable.Rows.Add(errorChar, "Русские буквы недопустимы", position);
+                    hasErrors = true;
+                    position += errorMatch.Length;
+                    continue;
+                }
 
-        //    while (position < code.Length)
-        //    {
-        //        char current = code[position];
-        //        int charPositionInLine = position - lineStartPosition + 1;
+                errorMatch = Regex.Match(input.Substring(position), tokenPatterns["INVALID"]);
+                if (errorMatch.Success && errorMatch.Index == 0)
+                {
+                    string errorChar = errorMatch.Value;
+                    tokenTable.Rows.Add(errorChar, "Недопустимый спецсимвол", position);
+                    hasErrors = true;
+                    position += errorMatch.Length;
+                    continue;
+                }
 
-        //        // Пропускаем пробелы
-        //        if (char.IsWhiteSpace(current))
-        //        {
+                // Затем проверяем допустимые токены
+                foreach (var pattern in tokenPatterns)
+                {
+                    // Пропускаем шаблоны для ошибок и пробелов
+                    if (pattern.Key == "RUSSIAN" || pattern.Key == "INVALID" || pattern.Key == "WHITESPACE")
+                        continue;
 
-        //            tokens.Add(new Token(
-        //                5, "Пробел", " ",
-        //                line, charPositionInLine, charPositionInLine
-        //            ));
+                    var match = Regex.Match(input.Substring(position), pattern.Value);
 
-        //            position++;
-        //            continue;
-        //        }
+                    if (match.Success && match.Index == 0)
+                    {
+                        string value = match.Value;
+                        string tokenType = GetTokenType(pattern.Key, value);
 
-        //        // Обработка букв (идентификаторы и ключевые слова)
-        //        if (char.IsLetter(current))
-        //        {
-        //            int start = position;
-        //            int startCharPos = charPositionInLine;
+                        tokenTable.Rows.Add(value, tokenType, position);
 
-        //            while (position < code.Length && (char.IsLetterOrDigit(code[position]) || code[position] == '_'))
-        //            {
-        //                position++;
-        //            }
+                        position += match.Length;
+                        matched = true;
+                        break;
+                    }
+                }
 
-        //            string value = code.Substring(start, position - start);
-        //            int endCharPos = startCharPos + (position - start) - 1;
+                // Пропускаем пробелы
+                var spaceMatch = Regex.Match(input.Substring(position), tokenPatterns["WHITESPACE"]);
+                if (spaceMatch.Success && spaceMatch.Index == 0)
+                {
+                    position += spaceMatch.Length;
+                    matched = true;
+                }
 
-        //            if (keyword.ContainsKey(value))
-        //            {
-        //                tokens.Add(new Token(
-        //                    keyword[value], "Ключевое слово", value,
-        //                    line, startCharPos, endCharPos
-        //                ));
-        //            }
-        //            else
-        //            {
-        //                tokens.Add(new Token(
-        //                    4, "Идентификатор", value,
-        //                    line, startCharPos, endCharPos
-        //                ));
-        //            }
-        //            continue;
-        //        }
+                if (!matched && position < input.Length)
+                {
+                    // Если ничего не совпало, но есть еще символы - это ошибка
+                    string errorChar = input[position].ToString();
+                    tokenTable.Rows.Add(errorChar, position, "Неизвестная лексема");
+                    hasErrors = true;
+                    position++;
+                }
+            }
 
-        //        // Обработка чисел (целые и дробные)
-        //        if (char.IsDigit(current))
-        //        {
-        //            int start = position;
-        //            int startCharPos = charPositionInLine;
-        //            bool hasDecimalPoint = false;
+            // Выводим результаты в DataGridView
+            dataGridView.DataSource = tokenTable;
 
-        //            while (position < code.Length && (char.IsDigit(code[position]) || (code[position] == '.' && !hasDecimalPoint)))
-        //            {
-        //                if (code[position] == '.') hasDecimalPoint = true;
-        //                position++;
-        //            }
+            if (hasErrors)
+            {
+                MessageBox.Show("Обнаружены лексические ошибки!", "Ошибка",
+                              MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            else
+            {
+                MessageBox.Show("Лексический анализ завершен успешно!", "Успех",
+                              MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
 
-        //            string value = code.Substring(start, position - start);
-        //            int endCharPos = startCharPos + (position - start) - 1;
-
-        //            tokens.Add(new Token(
-        //                hasDecimalPoint ? 9 : 8,
-        //                hasDecimalPoint ? "Дробное число" : "Целое число без знака",
-        //                value,
-        //                line, startCharPos, endCharPos
-        //            ));
-        //            continue;
-        //        }
-
-        //        // Обработка операторов
-        //        if (current == ':' && position + 1 < code.Length && code[position + 1] == '=')
-        //        {
-        //            tokens.Add(new Token(
-        //                7, "Оператор присваивания", ":=",
-        //                line, charPositionInLine, charPositionInLine + 1
-        //            ));
-        //            position += 2;
-        //            continue;
-        //        }
-
-        //        // Обработка точки с запятой
-        //        if (current == ';')
-        //        {
-        //            tokens.Add(new Token(
-        //                10, "Конец оператора", ";",
-        //                line, charPositionInLine, charPositionInLine
-        //            ));
-        //            position++;
-        //            continue;
-        //        }
-
-        //        // Обработка недопустимых символов
-        //        tokens.Add(new Token(
-        //            11, "Недопустимый символ", current.ToString(),
-        //            line, charPositionInLine, charPositionInLine
-        //        ));
-        //        position++;
-        //    }
-
-        //    return tokens;
-        //}
-
-        //private class Token
-        //{
-        //    public int Code { get; }
-        //    public string Type { get; }
-        //    public string Value { get; }
-        //    public int Line { get; }
-        //    public int StartPosition { get; }
-        //    public int EndPosition { get; }
-
-        //    public Token(int code, string type, string value, int line, int startPos, int endPos)
-        //    {
-        //        Code = code;
-        //        Type = type;
-        //        Value = value;
-        //        Line = line;
-        //        StartPosition = startPos;
-        //        EndPosition = endPos;
-        //    }
-        //}
-        #endregion
-        #region Парсер
-        //private void Start_Click(object sender, EventArgs e)
-        //{
-        //    string input = richTextBox1.Text.Trim();
-        //    dataGridView1.Rows.Clear();
-        //    AnalyzeSyntax(input);
-        //}
-
-        //private void AnalyzeSyntax(string input)
-        //{
-        //    string[] tokens = Tokenize(input);
-        //    int currentState = 0;
-        //    int position = 0;
-        //    int errorCount = 0;
-        //    bool recoveryMode = false;
-
-        //    for (int i = 0; i < tokens.Length; i++)
-        //    {
-        //        string token = tokens[i];
-        //        int tokenStart = position;
-        //        int tokenEnd = position + token.Length - 1;
-
-        //        if (recoveryMode)
-        //        {
-        //            // В режиме восстановления пропускаем токены, пока не найдем подходящий
-        //            if (IsRecoveryToken(currentState, token))
-        //            {
-        //                recoveryMode = false;
-        //                i--; // Перепроверим этот токен в нормальном режиме
-        //                continue;
-        //            }
-        //            position += token.Length;
-        //            continue;
-        //        }
-
-        //        switch (currentState)
-        //        {
-        //            case 0: // Начало -> DECLARE
-        //                if (token == "DECLARE")
-        //                {
-        //                    currentState = 1;
-        //                }
-        //                else
-        //                {
-        //                    AddError("Сканер", ++errorCount, $"{tokenStart}-{tokenEnd}", "Ожидалось ключевое слово 'DECLARE'");
-        //                    recoveryMode = true;
-        //                }
-        //                break;
-
-        //            case 1: // DECLARE -> идентификатор
-        //                if (IsIdentifier(token))
-        //                {
-        //                    currentState = 2;
-        //                }
-        //                else
-        //                {
-        //                    AddError("Сканер", ++errorCount, $"{tokenStart}-{tokenEnd}", "Ожидался идентификатор после 'DECLARE'");
-        //                    recoveryMode = true;
-        //                }
-        //                break;
-
-        //            case 2: // идентификатор -> CONSTANT
-        //                if (token == "CONSTANT")
-        //                {
-        //                    currentState = 3;
-        //                }
-        //                else
-        //                {
-        //                    AddError("Сканер", ++errorCount, $"{tokenStart}-{tokenEnd}", "Ожидалось ключевое слово 'CONSTANT'");
-        //                    recoveryMode = true;
-        //                }
-        //                break;
-
-        //            case 3: // CONSTANT -> INTEGER/UNSIGNED
-        //                if (token == "INTEGER" || token == "UNSIGNED")
-        //                {
-        //                    currentState = 4;
-        //                }
-        //                else
-        //                {
-        //                    AddError("Сканер", ++errorCount, $"{tokenStart}-{tokenEnd}", "Ожидалось ключевое слово 'INTEGER' или 'UNSIGNED'");
-        //                    recoveryMode = true;
-        //                }
-        //                break;
-
-        //            case 4: // INTEGER/UNSIGNED -> :=
-        //                if (token == ":=")
-        //                {
-        //                    currentState = 5;
-        //                }
-        //                else
-        //                {
-        //                    AddError("Сканер", ++errorCount, $"{tokenStart}-{tokenEnd}", "Ожидался оператор присваивания ':='");
-        //                    recoveryMode = true;
-        //                }
-        //                break;
-
-        //            case 5: // := -> число
-        //                if (IsNumber(token))
-        //                {
-        //                    currentState = 6; // Успешное завершение
-        //                }
-        //                else
-        //                {
-        //                    AddError("Сканер", ++errorCount, $"{tokenStart}-{tokenEnd}", "Ожидалось целое число");
-        //                    recoveryMode = true;
-        //                }
-        //                break;
-        //        }
-
-        //        position += token.Length;
-        //        // Учитываем пробелы между токенами
-        //        while (position < input.Length && char.IsWhiteSpace(input[position]))
-        //        {
-        //            position++;
-        //        }
-        //    }
-
-        //    // Проверка завершения
-        //    if (currentState != 6)
-        //    {
-        //        AddError("Сканер", ++errorCount, "конец строки", "Незавершенное объявление");
-        //    }
-        //}
-
-        //private bool IsRecoveryToken(int currentState, string token)
-        //{
-        //    switch (currentState)
-        //    {
-        //        case 0: return token == "DECLARE";
-        //        case 1: return IsIdentifier(token);
-        //        case 2: return token == "CONSTANT";
-        //        case 3: return token == "INTEGER" || token == "UNSIGNED";
-        //        case 4: return token == ":=";
-        //        case 5: return IsNumber(token);
-        //        default: return false;
-        //    }
-        //}
-
-        //private void AddError(string component, int number, string position, string message)
-        //{
-        //    dataGridView1.Rows.Add(component, number, position, message);
-        //}
-
-        //private string[] Tokenize(string input)
-        //{
-        //    List<string> tokens = new List<string>();
-        //    int i = 0;
-
-        //    while (i < input.Length)
-        //    {
-        //        // Пропускаем пробелы
-        //        if (char.IsWhiteSpace(input[i]))
-        //        {
-        //            i++;
-        //            continue;
-        //        }
-
-        //        // Оператор присваивания
-        //        if (i + 1 < input.Length && input.Substring(i, 2) == ":=")
-        //        {
-        //            tokens.Add(":=");
-        //            i += 2;
-        //            continue;
-        //        }
-
-        //        // Ключевые слова и идентификаторы
-        //        if (char.IsLetter(input[i]))
-        //        {
-        //            int start = i;
-        //            while (i < input.Length && (char.IsLetterOrDigit(input[i]) || input[i] == '_'))
-        //            {
-        //                i++;
-        //            }
-        //            string word = input.Substring(start, i - start);
-        //            tokens.Add(word.ToUpper()); // Приводим к верхнему регистру для сравнения
-        //            continue;
-        //        }
-
-        //        // Числа
-        //        if (char.IsDigit(input[i]))
-        //        {
-        //            int start = i;
-        //            while (i < input.Length && char.IsDigit(input[i]))
-        //            {
-        //                i++;
-        //            }
-        //            tokens.Add(input.Substring(start, i - start));
-        //            continue;
-        //        }
-
-        //        // Одиночные символы (например, точка с запятой)
-        //        tokens.Add(input[i].ToString());
-        //        i++;
-        //    }
-
-        //    return tokens.ToArray();
-        //}
-
-        //private bool IsIdentifier(string token)
-        //{
-        //    if (string.IsNullOrEmpty(token)) return false;
-        //    if (!char.IsLetter(token[0]) && token[0] != '_') return false;
-
-        //    foreach (char c in token)
-        //    {
-        //        if (!char.IsLetterOrDigit(c) && c != '_') return false;
-        //    }
-
-        //    // Проверяем, что это не ключевое слово
-        //    string upperToken = token.ToUpper();
-        //    return upperToken != "DECLARE" && upperToken != "CONSTANT" &&
-        //           upperToken != "INTEGER" && upperToken != "UNSIGNED" &&
-        //           upperToken != "END" && upperToken != "ASSIGN";
-        //}
-
-        //private bool IsNumber(string token)
-        //{
-        //    return int.TryParse(token, out _);
-        //}
-        //}
-        #endregion
+        private string GetTokenType(string patternKey, string value)
+        {
+            switch (patternKey)
+            {
+                case "ID": return "Идентификатор";
+                case "POW": return "Оператор";
+                case "MULT":
+                    return value == "*" ? "Оператор" : "Оператор";
+                case "PLUS": return "Оператор";
+                case "MINUS": return "Оператор";
+                case "DOT": return "Точка";
+                default: return "Неизвестный токен";
+            }
+        }
         private void Start_Click(object sender, EventArgs e)
         {
+            //dataGridView1.Rows.Clear();
+            //var parser = new ExpressionParser(richTextBox1.Text, dataGridView1);
+            //bool isValid = parser.Parse();
+            //MessageBox.Show(isValid ? "Разбор успешен!" : "Ошибка разбора!");
+            LexicalAnalyzer();
+            Analyze(richTextBox1, dataGridView1);
+        }
+        public class ExpressionParser
+        {
+            private string input;
+            private int position;
+            private StringBuilder parseSequence;
+            private DataGridView dataGridView;
 
+            public ExpressionParser(string input, DataGridView dataGridView)
+            {
+                this.input = input.Replace(" ", "");
+                this.position = 0;
+                this.parseSequence = new StringBuilder();
+                this.dataGridView = dataGridView;
+            }
+
+            private char CurrentChar => position < input.Length ? input[position] : '\0';
+            private void Advance() => position++;
+            private void AddToSequence(string rule) => parseSequence.Append(rule + "-");
+            private bool IsLetter(char c) => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+            private bool IsDigit(char c) => c >= '0' && c <= '9';
+
+            public bool Parse()
+            {
+                bool result = Expression();
+                if (result && position == input.Length)
+                {
+                    dataGridView.Rows.Add("Полная последовательность:");
+                    dataGridView.Rows.Add(parseSequence.ToString().TrimEnd('-'));
+                    return true;
+                }
+                dataGridView.Rows.Add($"Ошибка на позиции {position}");
+                return false;
+            }
+
+            private bool Expression()
+            {
+                AddToSequence("expression");
+                if (!MultExpression()) return false;
+                return ExpressionTail();
+            }
+
+            private bool ExpressionTail()
+            {
+                while (CurrentChar == '+' || CurrentChar == '-')
+                {
+                    char op = CurrentChar;
+                    Advance();
+                    AddToSequence(op.ToString());
+
+                    if (!MultExpression()) return false;
+                }
+                return true;
+            }
+
+            private bool MultExpression()
+            {
+
+                if (!PowExpression()) return false;
+                
+                return MultExpressionTail();
+            }
+
+            private bool MultExpressionTail()
+            {
+                AddToSequence("multExpression");
+                while (CurrentChar == '*' || CurrentChar == '/')
+                {
+                    char op = CurrentChar;
+                    Advance();
+                    AddToSequence(op.ToString());
+
+                    if (!PowExpression()) return false;
+                }
+                return true;
+            }
+
+            private bool PowExpression()
+            {
+                AddToSequence("powExpression");
+                if (!ID()) return false;
+
+                if (CurrentChar == '^')
+                {
+                    Advance();
+                    AddToSequence("^");
+                    if (!PowExpression()) return false;
+                }
+                return true;
+            }
+
+            private bool ID()
+            {
+                if (!IsLetter(CurrentChar)) return false;
+
+                AddToSequence("ID");
+                Advance();
+
+                while (IsLetter(CurrentChar) || IsDigit(CurrentChar))
+                    Advance();
+
+                return true;
+            }
+        }
+        private void button1_Click(object sender, EventArgs e)
+        {
+            // Очистка предыдущих результатов
+            dataGridView1.Rows.Clear();
+            dataGridView1.Columns.Clear();
+            dataGridView1.Columns.Add("String", "Подстрока");
+            // Получение текста из RichTextBox
+            string text = richTextBox1.Text;
+
+            // Регулярное выражение для целых чисел и чисел с плавающей точкой
+            string pattern = @"-?\d+(?:,\d+)?";
+            Regex regex = new Regex(pattern);
+
+            // Поиск всех совпадений
+            MatchCollection matches = regex.Matches(text);
+
+            // Добавление результатов в DataGridView
+            foreach (Match match in matches)
+            {
+                int startIndex = match.Index;
+                string value = match.Value;
+                dataGridView1.Rows.Add(value, startIndex);
+            }
+
+            // Сброс предыдущего выделения в RichTextBox
+            richTextBox1.SelectAll();
+            richTextBox1.SelectionBackColor = richTextBox1.BackColor;
+            richTextBox1.DeselectAll();
+
+            // Выделение найденных подстрок
+            foreach (Match match in matches)
+            {
+                richTextBox1.Select(match.Index, match.Length);
+                richTextBox1.SelectionColor = Color.Blue;
+            }
+
+            // Снятие выделения текста
+            richTextBox1.SelectionStart = 0;
+            richTextBox1.SelectionLength = 0;
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            // Очистка предыдущих результатов
             dataGridView1.Rows.Clear();
 
-            try
-            {
-                // Получаем все строки из richTextBox1
-                string[] lines = richTextBox1.Lines;
-                int count = 1;
-                // Обрабатываем каждую строку отдельно
-                for (int lineNumber = 0; lineNumber < lines.Length; lineNumber++)
-                {
-                    string line = lines[lineNumber];
-                    // Если нужно удалять незначительные пробелы, раскомментируйте следующую строку
-                    // line = RemoveInsignificantSpaces(line);
+            dataGridView1.Columns.Clear();
+            dataGridView1.Columns.Add("Type", "Тип");
+            dataGridView1.Columns.Add("Value", "Значение");
+            dataGridView1.Columns.Add("Position", "Позиция");
+            SearchUsernames();
+        }
+        private void ResetSearch()
+        {
+            // Очистка результатов и выделения
+            dataGridView1.Rows.Clear();
+            richTextBox1.SelectAll();
+            richTextBox1.SelectionColor = richTextBox1.ForeColor;
+            richTextBox1.DeselectAll();
+        }
+        private void SearchUsernames()
+        {
+            ResetSearch();
+            FindPattern(
+                @"\b[a-z0-9_-]{5,20}\b",
+                "Юзернейм",
+                Color.Orange
+            );
+        }
+        private void FindPattern(string pattern, string typeName, Color color)
+        {
+            var regex = new Regex(pattern);
+            var matches = regex.Matches(richTextBox1.Text);
 
-                    List<Token> tokens = Parse(line);
-                    
-                    foreach (Token token in tokens)
-                    {
-                        // Добавляем информацию о строке в dataGridView1
-                        dataGridView1.Rows.Add(
-                            lineNumber + 1, // Нумерация строк начинается с 1
-                            $"с {token.StartPosition} по {token.EndPosition}",
-                            token.Messege,
-                            count++
-                        );
-                    }
-                }
-            }
-            catch (Exception ex)
+            foreach (Match match in matches)
             {
-                MessageBox.Show($"Ошибка: {ex.Message}");
+                // Добавление в таблицу
+                dataGridView1.Rows.Add(
+                    typeName,
+                    match.Value,
+                    match.Index
+                );
+
+                // Выделение в тексте
+                richTextBox1.SelectionStart = match.Index;
+                richTextBox1.SelectionLength = match.Length;
+                richTextBox1.SelectionColor = color;
             }
         }
-        private List<Token> Parse(string code)
+
+        // Переменные для автомата широты
+        private enum LatitudeState { Start, Sign, Integer, Ninety, Comma, Fraction }
+        private LatitudeState currentLatState;
+        private int currentPosition;
+        private int matchStartIndex;
+        private bool isNegative;
+        private readonly StringBuilder latitudeBuffer = new StringBuilder();
+        private readonly List<Tuple<string, int>> latitudeMatches = new List<Tuple<string, int>>();
+
+        private void button3_Click(object sender, EventArgs e)
         {
-            List<Token> tokens = new List<Token>();
+            // Сброс предыдущих результатов
+            dataGridView1.Rows.Clear();
+            richTextBox1.SelectAll();
+            richTextBox1.SelectionColor = Color.Black;
 
-            int line = 1;
-            int lineStartPosition = 0;
-            int currentState = 0;
-            int position = 0;
-            while (position < code.Length)
+            // Инициализация автомата
+            currentLatState = LatitudeState.Start;
+            currentPosition = 0;
+            matchStartIndex = 0;
+            isNegative = false;
+            latitudeBuffer.Clear();
+            latitudeMatches.Clear();
+
+            // Обработка текста
+            ProcessLatitude();
+
+            // Вывод результатов
+            foreach (var match in latitudeMatches)
             {
-                char current = code[position];
-                int charPositionInLine = position - lineStartPosition;
-                switch (currentState)
+                dataGridView1.Rows.Add("Широта", match.Item1, match.Item2);
+                HighlightMatch(match.Item2, match.Item1.Length, Color.Red);
+            }
+        }
+
+        private void ProcessLatitude()
+        {
+            string text = richTextBox1.Text;
+
+            for (currentPosition = 0; currentPosition < text.Length; currentPosition++)
+            {
+                char c = text[currentPosition];
+
+                switch (currentLatState)
                 {
-                    case 0://Проверка на DECLARE
-                        while (char.IsWhiteSpace(current))
+                    case LatitudeState.Start:
+                        if (c == '-')
                         {
-                            position++;
-                            current = code[position];
+                            isNegative = true;
+                            currentLatState = LatitudeState.Sign;
+                            matchStartIndex = currentPosition;
+                            latitudeBuffer.Append(c);
                         }
-                        lineStartPosition = position;
-                        bool contains = code.Contains("DECLARE ");
-                        if (contains)
+                        else if (c == '9')
                         {
-                            position = find("DECLARE ", code);
-                            if (lineStartPosition != position)
-                                tokens.Add(new Token(
-                                    line, lineStartPosition, position, "Ожидалось DECLARE"
-                                ));
-                            position += 7;
+                            currentLatState = LatitudeState.Ninety;
+                            matchStartIndex = currentPosition;
+                            latitudeBuffer.Append(c);
                         }
-                        currentState = 1;
+                        else if (char.IsDigit(c) && c != '0')
+                        {
+                            currentLatState = LatitudeState.Integer;
+                            matchStartIndex = currentPosition;
+                            latitudeBuffer.Append(c);
+                        }
+                        else if (c == '0')
+                        {
+                            matchStartIndex = currentPosition;
+                            latitudeBuffer.Append(c);
+                            CommitLatitudeMatch();
+                        }
                         break;
 
-                    case 1://Проверка на индификатор
-                        while (char.IsWhiteSpace(current))
+                    case LatitudeState.Sign:
+                        if (c == '9')
                         {
-                            position++;
-                            current = code[position];
+                            currentLatState = LatitudeState.Ninety;
+                            latitudeBuffer.Append(c);
                         }
-                        lineStartPosition = position;
-                        while (position < code.Length && (char.IsLetterOrDigit(code[position]) || code[position] == '_') && code[position] != ' ')
+                        else if (char.IsDigit(c) && c != '0')
                         {
-                            position++;
-                        }
-                        if (position == lineStartPosition)
-                            tokens.Add(new Token(
-                                line, lineStartPosition, position, "Ожидался индификатор после DECLARE"
-                            ));
-                        currentState = 2;
-                        break;
-
-                    case 2://Проверка на CONSTANT
-                        // Пропускаем пробелы
-                        while (char.IsWhiteSpace(current))
-                        {
-                            position++;
-                            current = code[position];
-                        }
-
-                        lineStartPosition = position;
-                        contains = code.Contains(" CONSTANT ");
-                        if (contains)
-                        {
-                            position = find(" CONSTANT ", code) + 1;
-                            if (lineStartPosition != position)
-                                tokens.Add(new Token(
-                                    line, lineStartPosition, position, "Ожидался CONSTANT после индефикатора"
-                                ));
-                            position += 8;
+                            currentLatState = LatitudeState.Integer;
+                            latitudeBuffer.Append(c);
                         }
                         else
                         {
-                            position = find(" NUMERIC ", code) + 1;
-                            tokens.Add(new Token(
-                                    line, lineStartPosition, position, "Ожидался CONSTANT после индефикатора"
-                                ));
+                            ResetLatitudeState();
                         }
-                        currentState = 3;
                         break;
 
-                    case 3://Проверка на NUMERIC
-                        // Пропускаем пробелы
-                        while (char.IsWhiteSpace(current))
+                    case LatitudeState.Integer:
+                        if (char.IsDigit(c))
                         {
-                            position++;
-                            current = code[position];
+                            latitudeBuffer.Append(c);
+                            var numPart = latitudeBuffer.ToString().Replace("-", "");
+                            if (numPart.Length > 2 || int.Parse(numPart) > 89)
+                                ResetLatitudeState();
                         }
-
-                        lineStartPosition = position;
-                        contains = code.Contains(" NUMERIC ");
-                        if (contains)
+                        else if (c == ',')
                         {
-                            position = find(" NUMERIC ", code) + 1;
-                            if (lineStartPosition != position)
-                                tokens.Add(new Token(
-                                    line, lineStartPosition, position, "Ожидался NUMERIC после CONSTANT"
-                                ));
-                            position += 7;
+                            currentLatState = LatitudeState.Comma;
+                            latitudeBuffer.Append(c);
                         }
                         else
                         {
-                            position = find(" := ", code) + 1;
-                            tokens.Add(new Token(
-                                    line, lineStartPosition, position, "Ожидался NUMERIC после CONSTANT"
-                                ));
+                            CommitLatitudeMatch();
+                            ResetLatitudeState();
                         }
-                        currentState = 4;
                         break;
 
-                    case 4: //Проверка на оператор присваивания
-                        // Пропускаем пробелы
-                        while (char.IsWhiteSpace(current))
+                    case LatitudeState.Ninety:
+                        if (c == '0')
                         {
-                            position++;
-                            current = code[position];
-                        }
-
-                        lineStartPosition = position;
-                        contains = code.Contains(" := ");
-                        if (contains)
-                        {
-                            position = find(" := ", code) + 1;
-                            if (lineStartPosition != position)
-                                tokens.Add(new Token(
-                                    line, lineStartPosition, position, "Ожидалось := после NUMERIC"
-                                ));
-                            position += 2;
+                            latitudeBuffer.Append(c);
+                            currentLatState = LatitudeState.Comma;
                         }
                         else
                         {
-                            position = find(";", code) + 1;
-                            tokens.Add(new Token(
-                                    line, lineStartPosition, position, "Ожидалось := после NUMERIC"
-                                ));
+                            ResetLatitudeState();
                         }
-
-                        currentState = 5;
                         break;
 
-                    case 5: //Проверка на дробное число 
-                        // Пропускаем пробелы
-                        while (char.IsWhiteSpace(current))
+                    case LatitudeState.Comma:
+                        if (char.IsDigit(c))
                         {
-                            position++;
-                            current = code[position];
+                            currentLatState = LatitudeState.Fraction;
+                            latitudeBuffer.Append(c);
                         }
-
-                        lineStartPosition = position;
-                        while (position < code.Length && (!char.IsDigit(code[position]))) { position++; }//пока не дойдем до числа увеличиваем позицию
-
-                        if (lineStartPosition != position) //если предыдущий цикл сработал, то выводим ошибку
-                            tokens.Add(new Token(
-                                line, lineStartPosition, position, "Ожидалось дробное число после :="
-                            ));
-
-                        while (position < code.Length && (char.IsDigit(code[position]) || (code[position] == '.')))
+                        else
                         {
-                            position++;
+                            ResetLatitudeState();
                         }
-                        if (lineStartPosition != position)
-                        {
-                            string temp = code.Substring(lineStartPosition, position - lineStartPosition);
-                            if (!temp.Contains("."))
-                                tokens.Add(new Token(
-                                    line, lineStartPosition, position, "Введено целое цисло. Ожидалось дробное"
-                                ));
-                        }
-                        //position--;
-                        currentState = 6;
-                        if (position == code.Length)
-                            tokens.Add(new Token(
-                                    line, lineStartPosition, position, "Ожидался ; после дробного числа"
-                                ));
                         break;
 
-                    case 6:
-                        // Пропускаем пробелы
-                        while (char.IsWhiteSpace(current))
+                    case LatitudeState.Fraction:
+                        if (char.IsDigit(c))
                         {
-                            position++;
-                            current = code[position];
+                            latitudeBuffer.Append(c);
                         }
-                        lineStartPosition = position;
-                        if (code.Contains(";"))
+                        else
                         {
-                            position = find(";", code);
-                            if (lineStartPosition != position)
-                                tokens.Add(new Token(
-                                    line, lineStartPosition, position, "Ожидался ; после дробного числа"
-                                ));
+                            CommitLatitudeMatch();
+                            ResetLatitudeState();
+
+                            // Обработка текущего символа как нового числа
+                            currentPosition--; // Повторная обработка символа
                         }
-                        if (!(code.Contains(";")))
-                        {
-                            tokens.Add(new Token(
-                                    line, lineStartPosition, position, "Ожидался ; после дробного числа"
-                                ));
-                        }
-                        position += 1;
-                        currentState = 7;
                         break;
                 }
             }
-            return tokens;
+            CommitLatitudeMatch(); // Проверка последнего буфера
         }
-        private int find(string fs, string code)
-        {
-            return code.IndexOf(fs);
-        }
-        private string RemoveInsignificantSpaces(string input)
-        {
-            StringBuilder result = new StringBuilder();
-            bool inStringLiteral = false;
-            bool spaceAdded = true; // Начинаем с true, чтобы не добавлять пробелы в начале
 
-            for (int i = 0; i < input.Length; i++)
+
+        private bool IsValidLatitude(string value)
+        {
+            var culture = new CultureInfo("ru-RU");
+            return double.TryParse(value, NumberStyles.Any, culture, out double lat)
+                   && lat >= -90.0 && lat <= 90.0;
+        }
+        private void CommitLatitudeMatch()
+        {
+            if (latitudeBuffer.Length == 0) return;
+
+            var value = latitudeBuffer.ToString();
+            if (IsValidLatitude(value))
             {
-                char c = input[i];
-
-                if (c == '\'')
-                {
-                    inStringLiteral = !inStringLiteral;
-                    result.Append(c);
-                    spaceAdded = false;
-                }
-                else if (inStringLiteral)
-                {
-                    result.Append(c);
-                    spaceAdded = false;
-                }
-                else if (char.IsWhiteSpace(c))
-                {
-                    if (!spaceAdded && (i + 1 < input.Length) && !IsOperatorChar(input[i + 1]))
-                    {
-                        result.Append(' ');
-                        spaceAdded = true;
-                    }
-                }
-                else
-                {
-                    result.Append(c);
-                    spaceAdded = false;
-                }
+                latitudeMatches.Add(Tuple.Create(value, matchStartIndex));
             }
-
-            return result.ToString().Trim();
+            ResetLatitudeState();
         }
-        private bool IsOperatorChar(char c)
-        {
-            return c == ':' || c == '=' || c == '+' || c == '-' || c == '*' || c == '/' || c == ';';
-        }
-        private class Token
-        {
-            public int Line { get; }
-            public int StartPosition { get; }
-            public int EndPosition { get; }
-            public string Messege { get; }
+      
 
-            public Token(int line, int startPos, int endPos, string messege)
-            {
-                Line = line;
-                StartPosition = startPos;
-                EndPosition = endPos;
-                Messege = messege;
-            }
+        private void ResetLatitudeState()
+        {
+            currentLatState = LatitudeState.Start;
+            isNegative = false;
+            latitudeBuffer.Clear();
+        }
+
+        private void HighlightMatch(int position, int length, Color color)
+        {
+            richTextBox1.SelectionStart = position;
+            richTextBox1.SelectionLength = length;
+            richTextBox1.SelectionColor = color;
         }
     }
 }

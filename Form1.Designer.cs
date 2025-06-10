@@ -53,15 +53,6 @@ namespace Compiler
             this.вставитьToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.удалитьToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.выделитьВсеToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.текстToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.постановкаЗадачиToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.грамматикаToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.классификацияГрамматикиToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.методАнализаToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.диагностикаИНейтрализацияToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.текстовыйПримерToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.списокЛитературыToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.исходныйКодПрограммыToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.пускToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.справкаToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.вызовСправкиToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -91,6 +82,9 @@ namespace Compiler
             this.Line = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Column = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Message = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.button1 = new System.Windows.Forms.Button();
+            this.button2 = new System.Windows.Forms.Button();
+            this.button3 = new System.Windows.Forms.Button();
             this.menuStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
@@ -172,7 +166,6 @@ namespace Compiler
             this.menuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.файлToolStripMenuItem,
             this.правкаToolStripMenuItem,
-            this.текстToolStripMenuItem,
             this.пускToolStripMenuItem,
             this.справкаToolStripMenuItem});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
@@ -292,71 +285,6 @@ namespace Compiler
             this.выделитьВсеToolStripMenuItem.Text = "Выделить все";
             this.выделитьВсеToolStripMenuItem.Click += new System.EventHandler(this.Select_all_button);
             // 
-            // текстToolStripMenuItem
-            // 
-            this.текстToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.постановкаЗадачиToolStripMenuItem,
-            this.грамматикаToolStripMenuItem,
-            this.классификацияГрамматикиToolStripMenuItem,
-            this.методАнализаToolStripMenuItem,
-            this.диагностикаИНейтрализацияToolStripMenuItem,
-            this.текстовыйПримерToolStripMenuItem,
-            this.списокЛитературыToolStripMenuItem,
-            this.исходныйКодПрограммыToolStripMenuItem});
-            this.текстToolStripMenuItem.Name = "текстToolStripMenuItem";
-            this.текстToolStripMenuItem.Size = new System.Drawing.Size(48, 20);
-            this.текстToolStripMenuItem.Text = "Текст";
-            // 
-            // постановкаЗадачиToolStripMenuItem
-            // 
-            this.постановкаЗадачиToolStripMenuItem.Name = "постановкаЗадачиToolStripMenuItem";
-            this.постановкаЗадачиToolStripMenuItem.Size = new System.Drawing.Size(288, 22);
-            this.постановкаЗадачиToolStripMenuItem.Text = "Постановка задачи";
-            // 
-            // грамматикаToolStripMenuItem
-            // 
-            this.грамматикаToolStripMenuItem.Name = "грамматикаToolStripMenuItem";
-            this.грамматикаToolStripMenuItem.Size = new System.Drawing.Size(288, 22);
-            this.грамматикаToolStripMenuItem.Text = "Грамматика";
-            // 
-            // классификацияГрамматикиToolStripMenuItem
-            // 
-            this.классификацияГрамматикиToolStripMenuItem.Name = "классификацияГрамматикиToolStripMenuItem";
-            this.классификацияГрамматикиToolStripMenuItem.Size = new System.Drawing.Size(288, 22);
-            this.классификацияГрамматикиToolStripMenuItem.Text = "Классификация грамматики";
-            this.классификацияГрамматикиToolStripMenuItem.Click += new System.EventHandler(this.классификацияГрамматикиToolStripMenuItem_Click);
-            // 
-            // методАнализаToolStripMenuItem
-            // 
-            this.методАнализаToolStripMenuItem.Name = "методАнализаToolStripMenuItem";
-            this.методАнализаToolStripMenuItem.Size = new System.Drawing.Size(288, 22);
-            this.методАнализаToolStripMenuItem.Text = "Метод анализа";
-            // 
-            // диагностикаИНейтрализацияToolStripMenuItem
-            // 
-            this.диагностикаИНейтрализацияToolStripMenuItem.Name = "диагностикаИНейтрализацияToolStripMenuItem";
-            this.диагностикаИНейтрализацияToolStripMenuItem.Size = new System.Drawing.Size(288, 22);
-            this.диагностикаИНейтрализацияToolStripMenuItem.Text = "Диагностика и нейтрализация ошибок";
-            this.диагностикаИНейтрализацияToolStripMenuItem.Click += new System.EventHandler(this.диагностикаИНейтрализацияToolStripMenuItem_Click);
-            // 
-            // текстовыйПримерToolStripMenuItem
-            // 
-            this.текстовыйПримерToolStripMenuItem.Name = "текстовыйПримерToolStripMenuItem";
-            this.текстовыйПримерToolStripMenuItem.Size = new System.Drawing.Size(288, 22);
-            this.текстовыйПримерToolStripMenuItem.Text = "Текстовый пример";
-            // 
-            // списокЛитературыToolStripMenuItem
-            // 
-            this.списокЛитературыToolStripMenuItem.Name = "списокЛитературыToolStripMenuItem";
-            this.списокЛитературыToolStripMenuItem.Size = new System.Drawing.Size(288, 22);
-            this.списокЛитературыToolStripMenuItem.Text = "Список литературы";
-            // 
-            // исходныйКодПрограммыToolStripMenuItem
-            // 
-            this.исходныйКодПрограммыToolStripMenuItem.Name = "исходныйКодПрограммыToolStripMenuItem";
-            this.исходныйКодПрограммыToolStripMenuItem.Size = new System.Drawing.Size(288, 22);
-            this.исходныйКодПрограммыToolStripMenuItem.Text = "Исходный код программы";
-            // 
             // пускToolStripMenuItem
             // 
             this.пускToolStripMenuItem.Name = "пускToolStripMenuItem";
@@ -471,7 +399,7 @@ namespace Compiler
             // FontSize
             // 
             this.FontSize.AutoSize = true;
-            this.FontSize.Location = new System.Drawing.Point(582, 53);
+            this.FontSize.Location = new System.Drawing.Point(650, 32);
             this.FontSize.Name = "FontSize";
             this.FontSize.Size = new System.Drawing.Size(110, 15);
             this.FontSize.TabIndex = 18;
@@ -623,12 +551,48 @@ namespace Compiler
             this.Message.Name = "Message";
             this.Message.ReadOnly = true;
             // 
+            // button1
+            // 
+            this.button1.BackColor = System.Drawing.SystemColors.Control;
+            this.button1.Location = new System.Drawing.Point(488, 50);
+            this.button1.Name = "button1";
+            this.button1.Size = new System.Drawing.Size(29, 35);
+            this.button1.TabIndex = 21;
+            this.button1.Text = "1";
+            this.button1.UseVisualStyleBackColor = false;
+            this.button1.Click += new System.EventHandler(this.button1_Click);
+            // 
+            // button2
+            // 
+            this.button2.BackColor = System.Drawing.SystemColors.Control;
+            this.button2.Location = new System.Drawing.Point(523, 50);
+            this.button2.Name = "button2";
+            this.button2.Size = new System.Drawing.Size(29, 35);
+            this.button2.TabIndex = 22;
+            this.button2.Text = "2";
+            this.button2.UseVisualStyleBackColor = false;
+            this.button2.Click += new System.EventHandler(this.button2_Click);
+            // 
+            // button3
+            // 
+            this.button3.BackColor = System.Drawing.SystemColors.Control;
+            this.button3.Location = new System.Drawing.Point(558, 50);
+            this.button3.Name = "button3";
+            this.button3.Size = new System.Drawing.Size(29, 35);
+            this.button3.TabIndex = 23;
+            this.button3.Text = "3";
+            this.button3.UseVisualStyleBackColor = false;
+            this.button3.Click += new System.EventHandler(this.button3_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.ActiveBorder;
             this.ClientSize = new System.Drawing.Size(764, 405);
+            this.Controls.Add(this.button3);
+            this.Controls.Add(this.button2);
+            this.Controls.Add(this.button1);
             this.Controls.Add(this.splitContainer1);
             this.Controls.Add(this.SizeDown);
             this.Controls.Add(this.SizeUP);
@@ -661,7 +625,6 @@ namespace Compiler
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
-            this.FormClosing += Exit_button;
 
         }
 
@@ -687,15 +650,6 @@ namespace Compiler
         private ToolStripMenuItem вставитьToolStripMenuItem;
         private ToolStripMenuItem удалитьToolStripMenuItem;
         private ToolStripMenuItem выделитьВсеToolStripMenuItem;
-        private ToolStripMenuItem текстToolStripMenuItem;
-        private ToolStripMenuItem постановкаЗадачиToolStripMenuItem;
-        private ToolStripMenuItem грамматикаToolStripMenuItem;
-        private ToolStripMenuItem классификацияГрамматикиToolStripMenuItem;
-        private ToolStripMenuItem методАнализаToolStripMenuItem;
-        private ToolStripMenuItem диагностикаИНейтрализацияToolStripMenuItem;
-        private ToolStripMenuItem текстовыйПримерToolStripMenuItem;
-        private ToolStripMenuItem списокЛитературыToolStripMenuItem;
-        private ToolStripMenuItem исходныйКодПрограммыToolStripMenuItem;
         private ToolStripMenuItem пускToolStripMenuItem;
         private ToolStripMenuItem справкаToolStripMenuItem;
         private ToolStripMenuItem вызовСправкиToolStripMenuItem;
@@ -725,5 +679,8 @@ namespace Compiler
         private StatusStrip statusStrip1;
         private ToolStripStatusLabel toolStripStatusLabel1;
         private ToolStripStatusLabel toolStripStatusLabel2;
+        private Button button1;
+        private Button button2;
+        private Button button3;
     }
 }
